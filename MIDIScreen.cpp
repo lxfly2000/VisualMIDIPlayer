@@ -10,7 +10,7 @@
 
 
 MIDIScreen::MIDIScreen() :colorWhiteKey(0x00001A80), colorBlackKey(0x00001A80),
-colorWhiteKeyPressed(0x00FFFF00), colorBlackKeyPressed(0x00FFFF00)
+colorWhiteKeyPressed(0x00FFFF00), colorBlackKeyPressed(0x00FFFF00), presentPressure(true)
 {
 	SetRectangle(0, 0, 640);
 }
@@ -35,7 +35,7 @@ void MIDIScreen::DrawWhiteKey()
 				tempY = drawLength_keyWhite*j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyWhite + 1.0f, tempY + drawLength_keyWhite - 1.0f, colorWhiteKey, FALSE);
-				SetDrawBlendMode(DX_BLENDMODE_ALPHA, pplayer->GetKeyPressure(j, i));
+				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += pplayer->GetChannelPitchBend(j)*width_avgKey;
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyWhite + 1.0f, tempY + drawLength_keyWhite - 1.0f, colorWhiteKeyPressed, TRUE);
 			}
@@ -51,7 +51,7 @@ void MIDIScreen::DrawBlackKey()
 				tempY = drawLength_keyWhite*j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyBlack + 1.0f, tempY + drawLength_keyBlack, colorBlackKey, TRUE);
-				SetDrawBlendMode(DX_BLENDMODE_ALPHA, pplayer->GetKeyPressure(j, i));
+				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += pplayer->GetChannelPitchBend(j)*width_avgKey;
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyBlack + 1.0f, tempY + drawLength_keyBlack, colorBlackKeyPressed, TRUE);
 			}
@@ -145,4 +145,9 @@ void MIDIScreen::SetWhiteKeyPressedColor(int color)
 void MIDIScreen::SetBlackKeyPressedColor(int color)
 {
 	colorBlackKeyPressed = color;
+}
+
+void MIDIScreen::SetPresentPressure(bool b)
+{
+	presentPressure = b;
 }

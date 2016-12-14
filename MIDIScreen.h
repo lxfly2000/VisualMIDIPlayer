@@ -21,6 +21,8 @@ public:
 	void SetWhiteKeyPressedColor(int color);
 	//设置黑键按下时的颜色，不支持透明 (0x00RRGGBB)
 	void SetBlackKeyPressedColor(int color);
+	//设置是否显示力度
+	void SetPresentPressure(bool);
 private:
 	//绘制白键
 	void DrawWhiteKey();
@@ -34,6 +36,7 @@ private:
 	float x, y, w, h, drawLength_keyWhite, drawWidth_keyWhite, start_keyBlackX, drawWidth_keyBlack, drawLength_keyBlack;
 	float width_avgKey;
 	int colorWhiteKey, colorBlackKey, colorWhiteKeyPressed, colorBlackKeyPressed;
+	bool presentPressure;
 	static int tableWhiteKey[];
 	static int tableBlackKey[];
 };

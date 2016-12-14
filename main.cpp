@@ -21,13 +21,14 @@ private:
 	bool running = true;
 	bool sendlong;
 	bool loopOn = true;
+	bool pressureOn = true;
 	int windowed;
 	int screenWidth, screenHeight;
 	int millisec = 0, minute = 0, second = 0, bar = 0, step = 0, tick = 0;
 	unsigned volume = 100u;
 	int posLoopStart, posLoopEnd;
 	TCHAR filepath[MAX_PATH] = L"";
-	TCHAR szStr[150];
+	TCHAR szStr[156];
 	TCHAR szTimeInfo[80];
 	TCHAR szLastTick[12] = TEXT("1:01:000");
 
@@ -53,6 +54,7 @@ int VMPlayer::Init(const TCHAR* param)
 	SetGraphMode(w, h, 32);
 	ChangeFont(TEXT("SimSun"));
 	SetFontSize(14);
+	SetFontThickness(3);
 	GetDrawScreenSize(&screenWidth, &screenHeight);
 	if (DxLib_Init() != 0)return -1;
 	SetDrawScreen(DX_SCREEN_BACK);
@@ -252,6 +254,11 @@ void VMPlayer::OnLoop()
 		mp.SetVolume(volume);
 		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
 	}
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_P))
+	{
+		ms.SetPresentPressure(pressureOn = !pressureOn);
+		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+	}
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
@@ -270,8 +277,8 @@ void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR
 			path = path2;
 		}
 	}
-	snprintfDx(str, strsize, TEXT("Space:播放/暂停 S:停止 O:打开文件 Esc:退出 L:循环[%s] E:发送长消息[%s] ↑/↓:音量调整[%3d%%]\n%s：%s"),
-		loopOn ? TEXT("开") : TEXT("关"), sendlong ? TEXT("开") : TEXT("关"),
+	snprintfDx(str, strsize, TEXT("Space:播放/暂停 S:停止 O:打开文件 Esc:退出 L:循环[%s] P:力度[%s] E:发送长消息[%s] ↑/↓:音量[%3d%%]\n%s：%s"),
+		loopOn ? TEXT("开") : TEXT("关"), pressureOn ? TEXT("开") : TEXT("关"), sendlong ? TEXT("开") : TEXT("关"),
 		volume, isplaying ? TEXT("正在播放") : TEXT("当前文件"), path[0] == TEXT('\0') ? TEXT("未选择") : path);
 	if (posLoopEnd)
 	{
