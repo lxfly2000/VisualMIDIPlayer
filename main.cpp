@@ -2,6 +2,8 @@
 #include<MidiPlayer.h>
 #include"MIDIScreen.h"
 
+#define VMP_TEMP_FILENAME "vmp_temp.mid"
+
 class VMPlayer
 {
 public:
@@ -92,7 +94,17 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 	TCHAR loopfilepath[MAX_PATH];
 	char p[ARRAYSIZE(filepath) * 2];
 	UnicodeToGBK(p, ARRAYSIZE(p), path);
-	if (!mp.LoadFile(p))return false;
+	if (!mp.LoadFile(p))
+	{
+#ifdef _UNICODE
+#define _T_RENAME _wrename
+#else
+#define _T_RENAME rename
+#endif
+		if (_T_RENAME(path, TEXT(VMP_TEMP_FILENAME)))return false;
+		mp.LoadFile(VMP_TEMP_FILENAME);
+		_T_RENAME(TEXT(VMP_TEMP_FILENAME), path);//特么……这样居然可以！！！（惊）
+	}
 	sprintfDx(loopfilepath, TEXT("%s.txt"), path);
 	int hLoopFile = FileRead_open(loopfilepath);
 	if (hLoopFile != -1 && hLoopFile != 0)
