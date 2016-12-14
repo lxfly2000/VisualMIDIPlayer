@@ -141,8 +141,9 @@ void VMPlayer::DrawTime()
 	tick %= mp.GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%02d:%03d/%s 事件：%5d 复音数：%2d"), mp.GetBPM(),
-		minute, second, millisec, bar + 1, step + 1, tick, szLastTick, mp.GetPosEventNum(), mp.GetPolyphone());
+	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%02d:%03d/%s 事件：%5d/%d 复音数：%2d"), mp.GetBPM(),
+		minute, second, millisec, bar + 1, step + 1, tick, szLastTick, mp.GetPosEventNum(), mp.GetEventCount(),
+		mp.GetPolyphone());
 	DrawString(0, 0, szTimeInfo, 0x00FFFFFF);
 }
 
