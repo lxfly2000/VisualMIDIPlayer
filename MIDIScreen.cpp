@@ -36,7 +36,7 @@ void MIDIScreen::DrawWhiteKey()
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyWhite + 1.0f, tempY + drawLength_keyWhite - 1.0f, colorWhiteKey, FALSE);
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, pplayer->GetKeyPressure(j, i));
-				tempX += pplayer->GetChannelPitchBend(j)*drawLength_keyWhite / 4;
+				tempX += pplayer->GetChannelPitchBend(j)*width_avgKey;
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyWhite + 1.0f, tempY + drawLength_keyWhite - 1.0f, colorWhiteKeyPressed, TRUE);
 			}
 }
@@ -52,7 +52,7 @@ void MIDIScreen::DrawBlackKey()
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyBlack + 1.0f, tempY + drawLength_keyBlack, colorBlackKey, TRUE);
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, pplayer->GetKeyPressure(j, i));
-				tempX += pplayer->GetChannelPitchBend(j)*drawLength_keyWhite / 4;
+				tempX += pplayer->GetChannelPitchBend(j)*width_avgKey;
 				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyBlack + 1.0f, tempY + drawLength_keyBlack, colorBlackKeyPressed, TRUE);
 			}
 }
@@ -124,6 +124,7 @@ void MIDIScreen::SetRectangle(float _x, float _y, float _w, float _h)
 	drawWidth_keyBlack = drawWidth_keyWhite*BLACKKEY_WIDTH / WHITEKEY_WIDTH;
 	start_keyBlackX = x + drawWidth_keyWhite - drawWidth_keyBlack / 2;
 	drawLength_keyBlack = drawLength_keyWhite*BLACKKEY_LENGTH / WHITEKEY_LENGTH;
+	width_avgKey = w / (KEY_END - KEY_START + 1);
 }
 
 void MIDIScreen::SetWhiteKeyColor(int color)

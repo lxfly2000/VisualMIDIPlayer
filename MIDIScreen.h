@@ -32,6 +32,7 @@ private:
 	int GetNumBlackKey(int n);
 	MidiPlayer* pplayer;
 	float x, y, w, h, drawLength_keyWhite, drawWidth_keyWhite, start_keyBlackX, drawWidth_keyBlack, drawLength_keyBlack;
+	float width_avgKey;
 	int colorWhiteKey, colorBlackKey, colorWhiteKeyPressed, colorBlackKeyPressed;
 	static int tableWhiteKey[];
 	static int tableBlackKey[];
