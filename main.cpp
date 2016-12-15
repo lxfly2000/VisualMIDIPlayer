@@ -58,7 +58,7 @@ int VMPlayer::Init(const TCHAR* param)
 	GetDrawScreenSize(&screenWidth, &screenHeight);
 	if (DxLib_Init() != 0)return -1;
 	SetDrawScreen(DX_SCREEN_BACK);
-	mp.SetSendLongMsg(sendlong = false);
+	mp.SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(&mp);
 	ms.SetRectangle(4, 18, w - 8, h - 54);
 	UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
