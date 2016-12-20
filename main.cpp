@@ -10,6 +10,8 @@ public:
 	int Init(const TCHAR* param);
 	void Run();
 	int End();
+	void _OnFinishPlayCallback();
+	static VMPlayer* _pObj;
 private:
 	void OnDraw();
 	void OnLoop();
@@ -35,8 +37,12 @@ private:
 	const int stepsperbar = 4;
 };
 
+VMPlayer* VMPlayer::_pObj = nullptr;
+
 int VMPlayer::Init(const TCHAR* param)
 {
+	_pObj = this;
+	mp.SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
 	int w = 800, h = 600;
 	if (strcmpDx(param, TEXT("600p")) == 0)
 	{
@@ -80,6 +86,11 @@ void VMPlayer::Run()
 		OnLoop();
 		OnDraw();
 	}
+}
+
+void VMPlayer::_OnFinishPlayCallback()
+{
+	UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
 }
 
 //http://blog.chinaunix.net/uid-23860671-id-189905.html
