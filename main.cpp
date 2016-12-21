@@ -10,6 +10,7 @@ public:
 	int Init(const TCHAR* param);
 	void Run();
 	int End();
+protected:
 	void _OnFinishPlayCallback();
 	static VMPlayer* _pObj;
 private:
