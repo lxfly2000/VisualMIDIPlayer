@@ -7,6 +7,8 @@
 class VMPlayer
 {
 public:
+	VMPlayer();
+	~VMPlayer();
 	int Init(const TCHAR* param);
 	void Run();
 	int End();
@@ -14,13 +16,14 @@ protected:
 	void _OnFinishPlayCallback();
 	static VMPlayer* _pObj;
 private:
+	unsigned ChooseDevice();
 	void OnDraw();
 	void OnLoop();
 	bool LoadMIDI(const TCHAR* path);
 	void DrawTime();
 	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path);
 	MIDIScreen ms;
-	MidiPlayer mp;
+	MidiPlayer* pmp;
 	bool running = true;
 	bool sendlong;
 	bool loopOn = true;
@@ -40,10 +43,49 @@ private:
 
 VMPlayer* VMPlayer::_pObj = nullptr;
 
+VMPlayer::VMPlayer()
+{
+}
+
+VMPlayer::~VMPlayer()
+{
+}
+
+unsigned VMPlayer::ChooseDevice()
+{
+	unsigned nMidiDev = midiOutGetNumDevs(), cur = 0;
+	TCHAR str[120];
+	MIDIOUTCAPS caps;
+	bool loop = true;
+	if (nMidiDev > 1)
+	{
+		while (loop)
+		{
+			if (ProcessMessage() == -1)loop = false;
+			ClearDrawScreen();
+			midiOutGetDevCaps(cur, &caps, sizeof caps);
+			sprintfDx(str, TEXT("选择 MIDI 输出设备：\n%2d:%s"), (int)cur, caps.szPname);
+			DrawString(0, 0, str, 0x00FFFFFF);
+			ScreenFlip();
+			switch (WaitKey())
+			{
+			case KEY_INPUT_UP:
+				if (cur != MIDI_MAPPER)cur--;
+				break;
+			case KEY_INPUT_DOWN:
+				if (cur != nMidiDev - 1)cur++;
+				break;
+			case KEY_INPUT_ESCAPE:running = loop = false; break;
+			case KEY_INPUT_RETURN:loop = false; break;
+			}
+		}
+	}
+	return cur;
+}
+
 int VMPlayer::Init(const TCHAR* param)
 {
 	_pObj = this;
-	mp.SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
 	int w = 800, h = 600;
 	if (strcmpDx(param, TEXT("600p")) == 0)
 	{
@@ -65,17 +107,21 @@ int VMPlayer::Init(const TCHAR* param)
 	GetDrawScreenSize(&screenWidth, &screenHeight);
 	if (DxLib_Init() != 0)return -1;
 	SetDrawScreen(DX_SCREEN_BACK);
-	mp.SetSendLongMsg(sendlong = true);
-	ms.SetPlayerSrc(&mp);
+
+	pmp = new MidiPlayer(ChooseDevice());
+	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
+	pmp->SetSendLongMsg(sendlong = true);
+	ms.SetPlayerSrc(pmp);
 	ms.SetRectangle(4, 18, w - 8, h - 54);
-	UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	return 0;
 }
 
 int VMPlayer::End()
 {
-	mp.Stop();
-	mp.Unload();
+	pmp->Stop();
+	pmp->Unload();
+	delete pmp;
 	return DxLib_End();
 }
 
@@ -91,7 +137,7 @@ void VMPlayer::Run()
 
 void VMPlayer::_OnFinishPlayCallback()
 {
-	UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 }
 
 //http://blog.chinaunix.net/uid-23860671-id-189905.html
@@ -108,7 +154,7 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 	TCHAR loopfilepath[MAX_PATH];
 	char p[ARRAYSIZE(filepath) * 2];
 	UnicodeToGBK(p, ARRAYSIZE(p), path);
-	if (!mp.LoadFile(p))
+	if (!pmp->LoadFile(p))
 	{
 #ifdef _UNICODE
 #define _T_RENAME _wrename
@@ -116,7 +162,7 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 #define _T_RENAME rename
 #endif
 		if (_T_RENAME(path, TEXT(VMP_TEMP_FILENAME)))return false;
-		mp.LoadFile(VMP_TEMP_FILENAME);
+		pmp->LoadFile(VMP_TEMP_FILENAME);
 		_T_RENAME(TEXT(VMP_TEMP_FILENAME), path);//特么……这样居然可以！！！（惊）
 	}
 	sprintfDx(loopfilepath, TEXT("%s.txt"), path);
@@ -124,19 +170,19 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 	if (hLoopFile != -1 && hLoopFile != 0)
 	{
 		FileRead_scanf(hLoopFile, TEXT("%d %d"), &posLoopStart, &posLoopEnd);
-		mp.SetLoop((float)posLoopStart, (float)posLoopEnd);
+		pmp->SetLoop((float)posLoopStart, (float)posLoopEnd);
 		loopOn = true;
 	}
 	else
 	{
 		posLoopStart = posLoopEnd = 0;
-		mp.SetLoop(0.0f, 0.0f);
+		pmp->SetLoop(0.0f, 0.0f);
 		loopOn = false;
 	}
 	FileRead_close(hLoopFile);
-	tick = (int)mp.GetLastEventTick();
-	step = tick / mp.GetQuarterNoteTicks();
-	tick %= mp.GetQuarterNoteTicks();
+	tick = (int)pmp->GetLastEventTick();
+	step = tick / pmp->GetQuarterNoteTicks();
+	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
 	swprintf_s(szLastTick, TEXT("%d:%02d:%03d"), bar + 1, step + 1, tick);
@@ -145,19 +191,19 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 
 void VMPlayer::DrawTime()
 {
-	millisec = mp.GetLastEventTick() ? (int)(mp.GetPosTimeInSeconds()*1000.0) : 0;
+	millisec = pmp->GetLastEventTick() ? (int)(pmp->GetPosTimeInSeconds()*1000.0) : 0;
 	second = millisec / 1000;
 	millisec %= 1000;
 	minute = second / 60;
 	second %= 60;
-	tick = (int)mp.GetPosTick();
-	step = tick / mp.GetQuarterNoteTicks();
-	tick %= mp.GetQuarterNoteTicks();
+	tick = (int)pmp->GetPosTick();
+	step = tick / pmp->GetQuarterNoteTicks();
+	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%02d:%03d/%s 事件：%5d/%d 复音数：%2d"), mp.GetBPM(),
-		minute, second, millisec, bar + 1, step + 1, tick, szLastTick, mp.GetPosEventNum(), mp.GetEventCount(),
-		mp.GetPolyphone());
+	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%02d:%03d/%s 事件：%5d/%d 复音数：%2d"), pmp->GetBPM(),
+		minute, second, millisec, bar + 1, step + 1, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
+		pmp->GetPolyphone());
 	DrawString(0, 0, szTimeInfo, 0x00FFFFFF);
 }
 
@@ -219,57 +265,57 @@ void VMPlayer::OnLoop()
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_SPACE))
 	{
-		mp.GetPlayStatus() ? mp.Pause() : mp.Play(true);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_S))
 	{
-		mp.Stop(false);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		pmp->Stop(false);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_O))
 	{
 		if (!windowed)ChangeWindowMode(windowed = TRUE);
 		if (SelectFile(filepath, NULL))
 			LoadMIDI(filepath);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_E))
 	{
-		mp.SetSendLongMsg(sendlong = !sendlong);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		pmp->SetSendLongMsg(sendlong = !sendlong);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_L))
 	{
 		loopOn = !loopOn;
-		if (mp.GetLastEventTick())
+		if (pmp->GetLastEventTick())
 		{
 			if (loopOn)
 			{
 				if (posLoopEnd)
-					mp.SetLoop((float)posLoopStart, (float)posLoopEnd);
-				else mp.SetLoop(0.0f, (float)mp.GetLastEventTick());
+					pmp->SetLoop((float)posLoopStart, (float)posLoopEnd);
+				else pmp->SetLoop(0.0f, (float)pmp->GetLastEventTick());
 			}
-			else mp.SetLoop(0.0f, 0.0f);
+			else pmp->SetLoop(0.0f, 0.0f);
 		}
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_UP))
 	{
 		volume = min(100, volume + 5);
-		mp.SetVolume(volume);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		pmp->SetVolume(volume);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_DOWN))
 	{
 		if (volume)volume -= 5;
-		mp.SetVolume(volume);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		pmp->SetVolume(volume);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_P))
 	{
 		ms.SetPresentPressure(pressureOn = !pressureOn);
-		UpdateString(szStr, ARRAYSIZE(szStr), mp.GetPlayStatus() == TRUE, filepath);
+		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
 }
 
