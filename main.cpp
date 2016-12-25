@@ -7,8 +7,6 @@
 class VMPlayer
 {
 public:
-	VMPlayer();
-	~VMPlayer();
 	int Init(const TCHAR* param);
 	void Run();
 	int End();
@@ -42,14 +40,6 @@ private:
 };
 
 VMPlayer* VMPlayer::_pObj = nullptr;
-
-VMPlayer::VMPlayer()
-{
-}
-
-VMPlayer::~VMPlayer()
-{
-}
 
 unsigned VMPlayer::ChooseDevice()
 {
