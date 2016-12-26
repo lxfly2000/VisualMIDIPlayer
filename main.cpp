@@ -7,13 +7,19 @@
 class VMPlayer
 {
 public:
-	int Init(const TCHAR* param);
+	int Init(TCHAR* param);
 	void Run();
 	int End();
 protected:
 	void _OnFinishPlayCallback();
+	bool OnLoadMIDI(TCHAR*);
+	void OnCommandPlay();
+	void OnDrop(HDROP);
 	static VMPlayer* _pObj;
 private:
+	static LRESULT CALLBACK ExtraProcess(HWND, UINT, WPARAM, LPARAM);
+	static WNDPROC dxProcess;
+	HWND hWindowDx;
 	unsigned ChooseDevice();
 	void OnDraw();
 	void OnLoop();
@@ -26,6 +32,7 @@ private:
 	bool sendlong;
 	bool loopOn = true;
 	bool pressureOn = true;
+	int posYLowerText;
 	int windowed;
 	int screenWidth, screenHeight;
 	int millisec = 0, minute = 0, second = 0, bar = 0, step = 0, tick = 0;
@@ -40,6 +47,7 @@ private:
 };
 
 VMPlayer* VMPlayer::_pObj = nullptr;
+WNDPROC VMPlayer::dxProcess = nullptr;
 
 unsigned VMPlayer::ChooseDevice()
 {
@@ -54,8 +62,8 @@ unsigned VMPlayer::ChooseDevice()
 			if (ProcessMessage() == -1)loop = false;
 			ClearDrawScreen();
 			midiOutGetDevCaps(cur, &caps, sizeof caps);
-			sprintfDx(str, TEXT("选择 MIDI 输出设备：\n%2d:%s"), (int)cur, caps.szPname);
-			DrawString(0, 0, str, 0x00FFFFFF);
+			sprintfDx(str, TEXT("Enter:确认 Esc:退出 ↑/↓:选择\n选择 MIDI 输出设备：[%2d]%s"), (int)cur, caps.szPname);
+			DrawString(0, posYLowerText, str, 0x00FFFFFF);
 			ScreenFlip();
 			switch (WaitKey())
 			{
@@ -73,7 +81,18 @@ unsigned VMPlayer::ChooseDevice()
 	return cur;
 }
 
-int VMPlayer::Init(const TCHAR* param)
+LRESULT CALLBACK VMPlayer::ExtraProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+	switch (msg)
+	{
+	case WM_DROPFILES://https://github.com/lxfly2000/XAPlayer/blob/master/Main.cpp#L301
+		VMPlayer::_pObj->OnDrop((HDROP)wp);
+		break;
+	}
+	return CallWindowProc(dxProcess, hwnd, msg, wp, lp);
+}
+
+int VMPlayer::Init(TCHAR* param)
 {
 	_pObj = this;
 	int w = 800, h = 600;
@@ -81,11 +100,13 @@ int VMPlayer::Init(const TCHAR* param)
 	{
 		w = 960;
 		h = 600;
+		param[0] = TEXT('\0');
 	}
 	else if (strcmpDx(param, TEXT("720p")) == 0)
 	{
 		w = 1280;
 		h = 720;
+		param[0] = TEXT('\0');
 	}
 	SetOutApplicationLogValidFlag(FALSE);
 	ChangeWindowMode(windowed = TRUE);
@@ -98,12 +119,31 @@ int VMPlayer::Init(const TCHAR* param)
 	if (DxLib_Init() != 0)return -1;
 	SetDrawScreen(DX_SCREEN_BACK);
 
-	pmp = new MidiPlayer(ChooseDevice());
+	posYLowerText = screenHeight - (GetFontSize() + 4) * 2;
+
+	pmp = new MidiPlayer(strlenDx(param) ? MIDI_MAPPER : ChooseDevice());
 	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
-	ms.SetRectangle(4, 18, w - 8, h - 54);
+	ms.SetRectangle(4, 18, w - 8, posYLowerText - 18);
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+
+	if (strlenDx(param))
+	{
+		if (param[0] == TEXT('\"'))
+		{
+			strcpyDx(filepath, param + 1);
+			filepath[strlenDx(filepath) - 1] = TEXT('\0');
+		}
+		else strcpyDx(filepath, param);
+		if (OnLoadMIDI(filepath))OnCommandPlay();
+	}
+
+	//http://nut-softwaredevelopper.hatenablog.com/entry/2016/02/25/001647
+	hWindowDx = GetMainWindowHandle();
+	dxProcess = (WNDPROC)GetWindowLongPtr(hWindowDx, GWLP_WNDPROC);
+	SetWindowLongPtr(hWindowDx, GWL_EXSTYLE, WS_EX_ACCEPTFILES | GetWindowLongPtr(hWindowDx, GWL_EXSTYLE));
+	SetWindowLongPtr(hWindowDx, GWLP_WNDPROC, (LONG_PTR)ExtraProcess);
 	return 0;
 }
 
@@ -130,6 +170,29 @@ void VMPlayer::_OnFinishPlayCallback()
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 }
 
+bool VMPlayer::OnLoadMIDI(TCHAR* path)
+{
+	bool ok = true;
+	if (stricmpDx(strrchrDx(path, TEXT('.')) + 1, TEXT("mid")))ok = false;
+	else if (!LoadMIDI(path))ok = false;
+	if (!ok)strcatDx(path, TEXT("（无效文件）"));
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path);
+	return ok;
+}
+
+void VMPlayer::OnCommandPlay()
+{
+	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+}
+
+void VMPlayer::OnDrop(HDROP hdrop)
+{
+	DragQueryFile(hdrop, 0, filepath, MAX_PATH);
+	DragFinish(hdrop);
+	if (OnLoadMIDI(filepath))OnCommandPlay();
+}
+
 //http://blog.chinaunix.net/uid-23860671-id-189905.html
 BOOL UnicodeToGBK(char* out,int outsize, const TCHAR* str)
 {
@@ -152,8 +215,9 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 #define _T_RENAME rename
 #endif
 		if (_T_RENAME(path, TEXT(VMP_TEMP_FILENAME)))return false;
-		pmp->LoadFile(VMP_TEMP_FILENAME);
+		bool ok = pmp->LoadFile(VMP_TEMP_FILENAME);
 		_T_RENAME(TEXT(VMP_TEMP_FILENAME), path);//特么……这样居然可以！！！（惊）
+		if (!ok)return false;
 	}
 	sprintfDx(loopfilepath, TEXT("%s.txt"), path);
 	int hLoopFile = FileRead_open(loopfilepath);
@@ -202,7 +266,7 @@ void VMPlayer::OnDraw()
 	ClearDrawScreen();
 	ms.Draw();
 	DrawTime();
-	DrawString(0, screenHeight - 36, szStr, 0x00FFFFFF);
+	DrawString(0, posYLowerText, szStr, 0x00FFFFFF);
 	ScreenFlip();
 }
 
@@ -254,10 +318,7 @@ void VMPlayer::OnLoop()
 		ChangeWindowMode(windowed);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_SPACE))
-	{
-		pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true);
-		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
-	}
+		OnCommandPlay();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_S))
 	{
 		pmp->Stop(false);
@@ -267,8 +328,7 @@ void VMPlayer::OnLoop()
 	{
 		if (!windowed)ChangeWindowMode(windowed = TRUE);
 		if (SelectFile(filepath, NULL))
-			LoadMIDI(filepath);
-		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+			OnLoadMIDI(filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_E))
 	{
