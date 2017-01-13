@@ -26,6 +26,7 @@ private:
 	bool LoadMIDI(const TCHAR* path);
 	void DrawTime();
 	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path);
+	void UpdateTextLastTick();
 	MIDIScreen ms;
 	MidiPlayer* pmp;
 	bool running = true;
@@ -43,7 +44,7 @@ private:
 	TCHAR szTimeInfo[80];
 	TCHAR szLastTick[12] = TEXT("1:01:000");
 
-	const int stepsperbar = 4;
+	int stepsperbar = 4;
 };
 
 VMPlayer* VMPlayer::_pObj = nullptr;
@@ -234,17 +235,27 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 		loopOn = false;
 	}
 	FileRead_close(hLoopFile);
+	UpdateTextLastTick();
+	return true;
+}
+
+void VMPlayer::UpdateTextLastTick()
+{
 	tick = (int)pmp->GetLastEventTick();
 	step = tick / pmp->GetQuarterNoteTicks();
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
 	swprintf_s(szLastTick, TEXT("%d:%02d:%03d"), bar + 1, step + 1, tick);
-	return true;
 }
 
 void VMPlayer::DrawTime()
 {
+	if (stepsperbar != pmp->GetStepsPerBar())
+	{
+		stepsperbar = pmp->GetStepsPerBar();
+		UpdateTextLastTick();
+	}
 	millisec = pmp->GetLastEventTick() ? (int)(pmp->GetPosTimeInSeconds()*1000.0) : 0;
 	second = millisec / 1000;
 	millisec %= 1000;
