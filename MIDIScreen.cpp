@@ -5,6 +5,7 @@
 #define BLACKKEY_LENGTH 96
 #define BLACKKEY_WIDTH 10
 #define MAX_CHANNEL 16
+#define ROW_SPACING 1
 #define KEY_START 0
 #define KEY_END 127
 
@@ -23,7 +24,7 @@ void MIDIScreen::Draw()
 	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 }
 
-float tempX, tempY;
+int tempX, tempY;
 
 void MIDIScreen::DrawWhiteKey()
 {
@@ -34,10 +35,10 @@ void MIDIScreen::DrawWhiteKey()
 				tempX = drawWidth_keyWhite*GetNumWhiteKey(i) + x;
 				tempY = drawLength_keyWhite*j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
-				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyWhite + 1.0f, tempY + drawLength_keyWhite - 1.0f, colorWhiteKey, FALSE);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKey, FALSE);
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
-				tempX += pplayer->GetChannelPitchBend(j)*width_avgKey;
-				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyWhite + 1.0f, tempY + drawLength_keyWhite - 1.0f, colorWhiteKeyPressed, TRUE);
+				tempX += (int)(pplayer->GetChannelPitchBend(j)*width_avgKey);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKeyPressed, TRUE);
 			}
 }
 
@@ -50,10 +51,10 @@ void MIDIScreen::DrawBlackKey()
 				tempX = drawWidth_keyWhite*GetNumBlackKey(i) + start_keyBlackX;
 				tempY = drawLength_keyWhite*j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
-				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyBlack + 1.0f, tempY + drawLength_keyBlack, colorBlackKey, TRUE);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, colorBlackKey, TRUE);
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
-				tempX += pplayer->GetChannelPitchBend(j)*width_avgKey;
-				DrawBoxAA(tempX, tempY, tempX + drawWidth_keyBlack + 1.0f, tempY + drawLength_keyBlack, colorBlackKeyPressed, TRUE);
+				tempX += (int)(pplayer->GetChannelPitchBend(j)*width_avgKey);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, colorBlackKeyPressed, TRUE);
 			}
 }
 
@@ -102,17 +103,18 @@ void MIDIScreen::SetPlayerSrc(MidiPlayer * _pplayer)
 	pplayer = _pplayer;
 }
 
-void MIDIScreen::SetRectangle(int _x, int _y, int _w, int _h)
+void MIDIScreen::SetRectangle(float _x, float _y, float _w, float _h)
 {
-	SetRectangle((float)_x, (float)_y, (float)_w, (float)_h);
+	SetRectangle((int)_x, (int)_y, (int)_w, (int)_h);
 }
 
-void MIDIScreen::SetRectangle(float _x, float _y, float _w, float _h)
+void MIDIScreen::SetRectangle(int _x, int _y, int _w, int _h)
 {
 	x = _x;
 	y = _y;
 	w = _w;
 	drawWidth_keyWhite = w / (GetNumWhiteKey(KEY_END, true) - GetNumWhiteKey(KEY_START, true) + 1);
+	x += (_w - drawWidth_keyWhite*(GetNumWhiteKey(KEY_END, true) - GetNumWhiteKey(KEY_START, true) + 1)) / 2;
 	if (_h)
 		h = _h;
 	else
@@ -121,7 +123,8 @@ void MIDIScreen::SetRectangle(float _x, float _y, float _w, float _h)
 			GetNumWhiteKey(KEY_START, true) + 1));
 	x -= drawWidth_keyWhite*GetNumWhiteKey(KEY_START, true);
 	drawLength_keyWhite = h / MAX_CHANNEL;
-	drawWidth_keyBlack = drawWidth_keyWhite*BLACKKEY_WIDTH / WHITEKEY_WIDTH;
+	y += (_h - drawLength_keyWhite*MAX_CHANNEL) / 2;
+	drawWidth_keyBlack = (drawWidth_keyWhite*BLACKKEY_WIDTH / WHITEKEY_WIDTH) | 1;
 	start_keyBlackX = x + drawWidth_keyWhite - drawWidth_keyBlack / 2;
 	drawLength_keyBlack = drawLength_keyWhite*BLACKKEY_LENGTH / WHITEKEY_LENGTH;
 	width_avgKey = w / (KEY_END - KEY_START + 1);

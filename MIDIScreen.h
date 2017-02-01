@@ -33,8 +33,8 @@ private:
 	//获取黑键序号，如果出错会返回 -1.（注意中间没有黑键的部分也会有一个序号用于充位）
 	int GetNumBlackKey(int n);
 	MidiPlayer* pplayer;
-	float x, y, w, h, drawLength_keyWhite, drawWidth_keyWhite, start_keyBlackX, drawWidth_keyBlack, drawLength_keyBlack;
-	float width_avgKey;
+	int x, y, w, h, drawLength_keyWhite, drawWidth_keyWhite, start_keyBlackX, drawWidth_keyBlack, drawLength_keyBlack;
+	int width_avgKey;
 	int colorWhiteKey, colorBlackKey, colorWhiteKeyPressed, colorBlackKeyPressed;
 	bool presentPressure;
 	static int tableWhiteKey[];
