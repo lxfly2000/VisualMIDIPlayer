@@ -36,7 +36,7 @@ void MIDIScreen::DrawWhiteKey()
 				tempY = drawLength_keyWhite*j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKey, FALSE);
-				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
+				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j)*width_avgKey);
 				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKeyPressed, TRUE);
 			}
@@ -52,7 +52,7 @@ void MIDIScreen::DrawBlackKey()
 				tempY = drawLength_keyWhite*j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, colorBlackKey, TRUE);
-				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
+				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j)*width_avgKey);
 				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, colorBlackKeyPressed, TRUE);
 			}
