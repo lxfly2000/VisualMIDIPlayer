@@ -15,6 +15,7 @@ protected:
 	bool OnLoadMIDI(TCHAR*);
 	void OnCommandPlay();
 	void OnDrop(HDROP);
+	void OnSeekBar(int);
 	static VMPlayer* _pObj;
 private:
 	static LRESULT CALLBACK ExtraProcess(HWND, UINT, WPARAM, LPARAM);
@@ -246,7 +247,7 @@ void VMPlayer::UpdateTextLastTick()
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szLastTick, TEXT("%d:%02d:%03d"), bar + 1, step + 1, tick);
+	swprintf_s(szLastTick, TEXT("%d:%d:%03d"), bar + 1, step + 1, tick);
 }
 
 void VMPlayer::DrawTime()
@@ -266,8 +267,8 @@ void VMPlayer::DrawTime()
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%02d:%03d/%s 事件：%5d/%d 复音数：%2d"), pmp->GetBPM(),
-		minute, second, millisec, bar + 1, step + 1, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
+	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件：%5d/%d 复音数：%2d"), pmp->GetBPM(),
+		minute, second, millisec, bar, step, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
 		pmp->GetPolyphone());
 	DrawString(0, 0, szTimeInfo, 0x00FFFFFF);
 }
@@ -378,6 +379,8 @@ void VMPlayer::OnLoop()
 		ms.SetPresentPressure(pressureOn = !pressureOn);
 		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_LEFT))OnSeekBar(-1);
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_RIGHT))OnSeekBar(1);
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
@@ -405,6 +408,12 @@ void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR
 		snprintfDx(szappend, ARRAYSIZE(szappend), TEXT("[%d,%d]"), posLoopStart, posLoopEnd);
 		strcatDx(str, szappend);
 	}
+}
+
+void VMPlayer::OnSeekBar(int dbars)
+{
+	pmp->SetPos(pmp->GetPosTick() + dbars*pmp->GetStepsPerBar()*pmp->GetQuarterNoteTicks());
+	pmp->Panic(true);
 }
 
 #ifdef _UNICODE
