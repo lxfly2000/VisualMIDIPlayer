@@ -247,7 +247,7 @@ void VMPlayer::UpdateTextLastTick()
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szLastTick, TEXT("%d:%d:%03d"), bar + 1, step + 1, tick);
+	swprintf_s(szLastTick, TEXT("%d:%d:%03d"), bar, step, tick);
 }
 
 void VMPlayer::DrawTime()
