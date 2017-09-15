@@ -175,8 +175,7 @@ void VMPlayer::_OnFinishPlayCallback()
 bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
 	bool ok = true;
-	if (stricmpDx(strrchrDx(path, TEXT('.')) + 1, TEXT("mid")))ok = false;
-	else if (!LoadMIDI(path))ok = false;
+	if (!LoadMIDI(path))ok = false;
 	if (!ok)strcatDx(path, TEXT("（无效文件）"));
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path);
 	return ok;
@@ -288,7 +287,7 @@ BOOL SelectFile(TCHAR *filepath, TCHAR *filename)
 	ofn.lStructSize = sizeof OPENFILENAME;
 	ofn.hwndOwner = GetActiveWindow();
 	ofn.hInstance = nullptr;
-	ofn.lpstrFilter = TEXT("MIDI 序列\0*.mid\0所有文件\0*\0\0");
+	ofn.lpstrFilter = TEXT("MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0");
 	ofn.lpstrFile = filepath;
 	ofn.lpstrTitle = TEXT("选择文件");
 	ofn.nMaxFile = MAX_PATH;
