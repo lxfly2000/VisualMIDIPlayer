@@ -378,6 +378,32 @@ void VMPlayer::OnLoop()
 		ms.SetPresentPressure(pressureOn = !pressureOn);
 		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_I))
+	{
+		std::list<MIDIMetaStructure> metalist;
+		if (pmp->GetMIDIMeta(metalist))
+		{
+			std::wstring metainfo;
+			const TCHAR metatype[7][4] = { L"文　本",L"版　权",L"序列名",L"乐器名",L"歌　词",L"标　记",L"ＣＵＥ" };
+			while (metalist.size())
+			{
+				const MIDIMetaStructure &ms = metalist.front();
+				if (ms.midiMetaEventType > 0 && ms.midiMetaEventType <= 7)
+				{
+					WCHAR wcharbuf[256] = L"";
+					if (metainfo.size())
+						metainfo.append(L"\n");
+					metainfo.append(L"[");
+					metainfo.append(metatype[ms.midiMetaEventType - 1]);
+					metainfo.append(L"]");
+					MultiByteToWideChar(CP_ACP, NULL, (char*)ms.pData, ms.dataLength, wcharbuf, ARRAYSIZE(wcharbuf) - 1);
+					metainfo.append(wcharbuf);
+				}
+				metalist.pop_front();
+			}
+			ShellMessageBox(NULL, hWindowDx, metainfo.c_str(), L"MIDI数据", MB_ICONINFORMATION);
+		}
+	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_LEFT))OnSeekBar(-1);
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_RIGHT))OnSeekBar(1);
 }
