@@ -40,6 +40,7 @@ private:
 	int millisec = 0, minute = 0, second = 0, bar = 0, step = 0, tick = 0;
 	unsigned volume = 100u;
 	int posLoopStart, posLoopEnd;
+	bool loopIncludeStart = false, loopIncludeEnd = true;
 	TCHAR filepath[MAX_PATH] = L"";
 	TCHAR szStr[156];
 	TCHAR szTimeInfo[80];
@@ -225,7 +226,12 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 	if (hLoopFile != -1 && hLoopFile != 0)
 	{
 		FileRead_scanf(hLoopFile, TEXT("%d %d"), &posLoopStart, &posLoopEnd);
-		pmp->SetLoop((float)posLoopStart, (float)posLoopEnd);
+		int la = 0, lb = 1;
+		if (!FileRead_eof(hLoopFile))FileRead_scanf(hLoopFile, TEXT("%d"), &la);
+		if (!FileRead_eof(hLoopFile))FileRead_scanf(hLoopFile, TEXT("%d"), &lb);
+		loopIncludeStart = (bool)la;
+		loopIncludeEnd = (bool)lb;
+		pmp->SetLoop((float)posLoopStart, (float)posLoopEnd, loopIncludeStart, loopIncludeEnd);
 		loopOn = true;
 	}
 	else
@@ -430,7 +436,8 @@ void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR
 	if (posLoopEnd)
 	{
 		TCHAR szappend[20];
-		snprintfDx(szappend, ARRAYSIZE(szappend), TEXT("[%d,%d]"), posLoopStart, posLoopEnd);
+		snprintfDx(szappend, ARRAYSIZE(szappend), TEXT("%c%d,%d%c"), loopIncludeStart ? '[' : '(',
+			posLoopStart, posLoopEnd, loopIncludeEnd ? ']' : ')');
 		strcatDx(str, szappend);
 	}
 }
