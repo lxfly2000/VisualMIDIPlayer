@@ -11,9 +11,10 @@
 
 
 MIDIScreen::MIDIScreen() :colorWhiteKey(0x00001A80), colorBlackKey(0x00001A80),
-colorWhiteKeyPressed(0x00FFFF00), colorBlackKeyPressed(0x00FFFF00), presentPressure(true)
+colorWhiteKeyPressed(0x00FFFF00), colorBlackKeyPressed(0x00FFFF00), presentPressure(true), presentProgram(false)
 {
 	SetRectangle(0, 0, 640);
+	ZeroMemory(chPrograms, ARRAYSIZE(chPrograms));
 }
 
 void MIDIScreen::Draw()
@@ -38,7 +39,7 @@ void MIDIScreen::DrawWhiteKey()
 				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKey, FALSE);
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j)*width_avgKey);
-				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKeyPressed, TRUE);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, presentProgram ? keyColors[chPrograms[j] % 8] : colorWhiteKeyPressed, TRUE);
 			}
 }
 
@@ -54,7 +55,7 @@ void MIDIScreen::DrawBlackKey()
 				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, colorBlackKey, TRUE);
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j)*width_avgKey);
-				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, colorBlackKeyPressed, TRUE);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, presentProgram ? keyColors[chPrograms[j] % 8] : colorBlackKeyPressed, TRUE);
 			}
 }
 
@@ -91,6 +92,11 @@ int MIDIScreen::tableBlackKey[] = {
 	-1,56,-1,57,-1,-1,59,-1,60,-1,61,-1,
 	-1,63,-1,64,-1,-1,66,-1,67,-1,68,-1,
 	-1,70,-1,71,-1,-1,73,-1
+};
+
+int MIDIScreen::keyColors[8] = {
+	0x00FFFF00,0x0000FF00,0x0000FFFF,0x000000FF,
+	0x00FF00FF,0x00FF0000,0x00FF7F3F,0x00FF007F
 };
 
 int MIDIScreen::GetNumBlackKey(int n)

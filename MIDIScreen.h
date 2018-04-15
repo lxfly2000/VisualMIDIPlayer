@@ -39,5 +39,9 @@ private:
 	bool presentPressure;
 	static int tableWhiteKey[];
 	static int tableBlackKey[];
+	static int keyColors[];
+public:
+	bool presentProgram;
+	int chPrograms[16];
 };
 

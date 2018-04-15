@@ -12,6 +12,7 @@ public:
 	int End();
 protected:
 	void _OnFinishPlayCallback();
+	void _OnProgramChangeCallback(int channel, int program);
 	bool OnLoadMIDI(TCHAR*);
 	void OnCommandPlay();
 	void OnDrop(HDROP);
@@ -126,6 +127,7 @@ int VMPlayer::Init(TCHAR* param)
 
 	pmp = new MidiPlayer(strlenDx(param) ? MIDI_MAPPER : ChooseDevice());
 	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
+	pmp->SetOnProgramChange([](int ch, int prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
 	ms.SetRectangle(4, 18, w - 8, posYLowerText - 18);
@@ -171,6 +173,11 @@ void VMPlayer::Run()
 void VMPlayer::_OnFinishPlayCallback()
 {
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+}
+
+void VMPlayer::_OnProgramChangeCallback(int channel, int program)
+{
+	ms.chPrograms[channel] = program;
 }
 
 bool VMPlayer::OnLoadMIDI(TCHAR* path)
@@ -384,6 +391,8 @@ void VMPlayer::OnLoop()
 		ms.SetPresentPressure(pressureOn = !pressureOn);
 		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	}
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_V))
+		ms.presentProgram = !ms.presentProgram;
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_I))
 	{
 		std::list<MIDIMetaStructure> metalist;
