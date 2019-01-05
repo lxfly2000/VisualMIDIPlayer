@@ -4,7 +4,8 @@ MIDI player with keyboard view.
 **由于本程序用到的 DxLib 不在 Github 上，请自行下载：[http://dxlib.o.oo7.jp](http://dxlib.o.oo7.jp)**
 
 ## 下载
-[百度云](https://pan.baidu.com/s/1b0Tkce)
+[GitHub](https://github.com/lxfly2000/VisualMIDIPlayer/releases)  
+[Old Versions](https://pan.baidu.com/s/1b0Tkce)
 
 ## 在线检测结果
 经测试360可能会误报该程序为病毒，你可以参考以下在线检测结果来决定是否要运行该程序。
