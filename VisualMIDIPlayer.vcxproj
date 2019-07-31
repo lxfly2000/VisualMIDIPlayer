@@ -98,6 +98,9 @@
       <AdditionalLibraryDirectories>DxLib_VC\僾儘僕僃僋僩偵捛壛偡傋偒僼傽僀儖_VC梡;libMidiPlayer\lib_d;libMidiPlayer\midifile\lib_d;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>MidiPlayer.lib;midifile.lib;WinMM.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -116,6 +119,9 @@
       <AdditionalLibraryDirectories>DxLib_VC\僾儘僕僃僋僩偵捛壛偡傋偒僼傽僀儖_VC梡;libMidiPlayer\lib_x64_d;libMidiPlayer\midifile\lib_x64_d;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>MidiPlayer.lib;midifile.lib;WinMM.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -138,6 +144,9 @@
       <AdditionalLibraryDirectories>DxLib_VC\僾儘僕僃僋僩偵捛壛偡傋偒僼傽僀儖_VC梡;libMidiPlayer\lib;libMidiPlayer\midifile\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>MidiPlayer.lib;midifile.lib;WinMM.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -160,6 +169,9 @@
       <AdditionalLibraryDirectories>DxLib_VC\僾儘僕僃僋僩偵捛壛偡傋偒僼傽僀儖_VC梡;libMidiPlayer\lib_x64;libMidiPlayer\midifile\lib_x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>MidiPlayer.lib;midifile.lib;WinMM.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -172,6 +184,9 @@
     <ProjectReference Include="libMidiPlayer\MIDIPlayer.vcxproj">
       <Project>{01e92b7c-8942-4c44-98a7-9f9ca97e683b}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
