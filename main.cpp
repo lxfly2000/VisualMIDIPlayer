@@ -4,6 +4,22 @@
 
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
 
+class DPIInfo
+{
+public:
+	DPIInfo()
+	{
+		HDC h = GetDC(0);
+		sx = GetDeviceCaps(h, LOGPIXELSX);
+		sy = GetDeviceCaps(h, LOGPIXELSY);
+	}
+	template<typename Tnum>Tnum X(Tnum n)const { return n * sx / odpi; }
+	template<typename Tnum>Tnum Y(Tnum n)const { return n * sy / odpi; }
+private:
+	const int odpi = USER_DEFAULT_SCREEN_DPI;
+	int sx, sy;
+};
+
 class VMPlayer
 {
 public:
@@ -115,9 +131,11 @@ int VMPlayer::Init(TCHAR* param)
 	SetOutApplicationLogValidFlag(FALSE);
 	ChangeWindowMode(windowed = TRUE);
 	SetAlwaysRunFlag(TRUE);
-	SetGraphMode(w, h, 32);
+	DPIInfo hdpi;
+	SetGraphMode(hdpi.X(w), hdpi.Y(h), 32);
 	ChangeFont(TEXT("SimSun"));
 	SetFontSize(14);
+	if (hdpi.X(14) > 14)ChangeFontType(DX_FONTTYPE_ANTIALIASING);
 	SetFontThickness(3);
 	GetDrawScreenSize(&screenWidth, &screenHeight);
 	if (DxLib_Init() != 0)return -1;
@@ -130,7 +148,7 @@ int VMPlayer::Init(TCHAR* param)
 	pmp->SetOnProgramChange([](int ch, int prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
-	ms.SetRectangle(4, 18, w - 8, posYLowerText - 18);
+	ms.SetRectangle(4, GetFontSize() + 4, hdpi.X(w) - 8, posYLowerText - (GetFontSize() + 4));
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 
 	if (strlenDx(param))
@@ -458,9 +476,9 @@ void VMPlayer::OnSeekBar(int dbars)
 }
 
 #ifdef _UNICODE
-int wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 #else
-int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 #endif
 {
 	VMPlayer vmp;
