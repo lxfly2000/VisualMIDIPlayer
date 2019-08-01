@@ -134,7 +134,7 @@ int VMPlayer::Init(TCHAR* param)
 	DPIInfo hdpi;
 	SetGraphMode(hdpi.X(w), hdpi.Y(h), 32);
 	ChangeFont(TEXT("SimSun"));
-	SetFontSize(14);
+	SetFontSize(hdpi.X(14));
 	if (hdpi.X(14) > 14)ChangeFontType(DX_FONTTYPE_ANTIALIASING);
 	SetFontThickness(3);
 	GetDrawScreenSize(&screenWidth, &screenHeight);
