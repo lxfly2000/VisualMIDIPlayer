@@ -129,7 +129,8 @@ int VMPlayer::Init(TCHAR* param)
 		param[0] = TEXT('\0');
 	}
 	SetOutApplicationLogValidFlag(FALSE);
-	SetWindowText(TEXT("Visual MIDI Player"));
+	TCHAR title[50] = TEXT("Visual MIDI Player");
+	SetWindowText(title);
 	ChangeWindowMode(windowed = TRUE);
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
@@ -145,6 +146,11 @@ int VMPlayer::Init(TCHAR* param)
 	posYLowerText = screenHeight - (GetFontSize() + 4) * 2;
 
 	pmp = new MidiPlayer(strlenDx(param) ? MIDI_MAPPER : ChooseDevice());
+	if (pmp->IsUsingWinRTMidi())
+		lstrcat(title, TEXT(" (WinRT MIDI)"));
+	else
+		lstrcat(title, TEXT(" (WinMM)"));
+	SetWindowText(title);
 	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
 	pmp->SetOnProgramChange([](int ch, int prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetSendLongMsg(sendlong = true);
