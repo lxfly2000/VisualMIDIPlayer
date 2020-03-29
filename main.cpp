@@ -62,9 +62,14 @@ private:
 	TCHAR szStr[156];
 	TCHAR szTimeInfo[80];
 	TCHAR szLastTick[12] = TEXT("1:01:000");
+	bool helpOpened = false;
+	int drawHelpLabelX, drawHelpLabelY, drawHelpX, drawHelpY;
 
 	int stepsperbar = 4;
 };
+
+TCHAR helpLabel[] = TEXT("F1:帮助");
+TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色 F11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\nShift+1,2...6: 静音/取消静音第11,12...16通道\n\n按F1关闭帮助。");
 
 VMPlayer* VMPlayer::_pObj = nullptr;
 WNDPROC VMPlayer::dxProcess = nullptr;
@@ -129,8 +134,7 @@ int VMPlayer::Init(TCHAR* param)
 		param[0] = TEXT('\0');
 	}
 	SetOutApplicationLogValidFlag(FALSE);
-	TCHAR title[50] = TEXT("Visual MIDI Player");
-	SetWindowText(title);
+	SetWindowText(TEXT("Visual MIDI Player"));
 	ChangeWindowMode(windowed = TRUE);
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
@@ -146,11 +150,6 @@ int VMPlayer::Init(TCHAR* param)
 	posYLowerText = screenHeight - (GetFontSize() + 4) * 2;
 
 	pmp = new MidiPlayer(strlenDx(param) ? MIDI_MAPPER : ChooseDevice());
-	if (pmp->IsUsingWinRTMidi())
-		lstrcat(title, TEXT(" (WinRT MIDI)"));
-	else
-		lstrcat(title, TEXT(" (WinMM)"));
-	SetWindowText(title);
 	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
 	pmp->SetOnProgramChange([](int ch, int prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetSendLongMsg(sendlong = true);
@@ -168,6 +167,14 @@ int VMPlayer::Init(TCHAR* param)
 		else strcpyDx(filepath, param);
 		if (OnLoadMIDI(filepath))OnCommandPlay();
 	}
+
+	int lineCount;
+	GetDrawStringSize(&drawHelpLabelX, &drawHelpLabelY, &lineCount, helpLabel, (int)strlenDx(helpLabel));
+	drawHelpLabelX = screenWidth - drawHelpLabelX;
+	drawHelpLabelY = 0;
+	GetDrawStringSize(&drawHelpX, &drawHelpY, &lineCount, helpInfo, (int)strlenDx(helpInfo));
+	drawHelpX = (screenWidth - drawHelpX) / 2;
+	drawHelpY = (screenHeight - drawHelpY) / 2;
 
 	//http://nut-softwaredevelopper.hatenablog.com/entry/2016/02/25/001647
 	hWindowDx = GetMainWindowHandle();
@@ -316,6 +323,10 @@ void VMPlayer::OnDraw()
 	ms.Draw();
 	DrawTime();
 	DrawString(0, posYLowerText, szStr, 0x00FFFFFF);
+	if (helpOpened)
+		DrawString(drawHelpX, drawHelpY, helpInfo, 0x00FFFFFF);
+	else
+		DrawString(drawHelpLabelX, drawHelpLabelY, helpLabel, 0x00FFFFFF);
 	ScreenFlip();
 }
 
@@ -462,6 +473,8 @@ void VMPlayer::OnLoop()
 			pmp->SetChannelEnabled(ch, !pmp->GetChannelEnabled(ch));
 		}
 	}
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_F1))
+		helpOpened = !helpOpened;
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
