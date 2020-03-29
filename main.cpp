@@ -72,7 +72,7 @@ private:
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
 const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色 I: 显示MIDI数据\n"
-	"R: 显示音色 F11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\nShift+1,2...6: 静音/取消静音第11,12...16通道\n\n按F1关闭帮助。");
+	"R: 显示音色 F11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\nShift+1,2...6: 静音/取消静音第11,12...16通道\n←/→: 定位\n\n按F1关闭帮助。");
 TCHAR programName[][30] = {
 L"Acoustic Grand Piano",
 L"Bright Acoustic Piano",
