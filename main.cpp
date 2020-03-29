@@ -129,6 +129,7 @@ int VMPlayer::Init(TCHAR* param)
 		param[0] = TEXT('\0');
 	}
 	SetOutApplicationLogValidFlag(FALSE);
+	SetWindowText(TEXT("Visual MIDI Player"));
 	ChangeWindowMode(windowed = TRUE);
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
@@ -439,6 +440,22 @@ void VMPlayer::OnLoop()
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_LEFT))OnSeekBar(-1);
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_RIGHT))OnSeekBar(1);
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_Z))
+		pmp->SetPlaybackSpeed(pmp->GetPlaybackSpeed() * 2.0f);
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_X))
+		pmp->SetPlaybackSpeed(1.0f);
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_C))
+		pmp->SetPlaybackSpeed(pmp->GetPlaybackSpeed() / 2.0f);
+	for (int i = KEY_INPUT_1; i <= KEY_INPUT_0; i++)
+	{
+		if (KeyManager::CheckOnHitKey(i))
+		{
+			unsigned ch = i - KEY_INPUT_1;
+			if ((CheckHitKey(KEY_INPUT_LSHIFT) || CheckHitKey(KEY_INPUT_RSHIFT)) && ch + 10 < 16)
+				ch += 10;
+			pmp->SetChannelEnabled(ch, !pmp->GetChannelEnabled(ch));
+		}
+	}
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)

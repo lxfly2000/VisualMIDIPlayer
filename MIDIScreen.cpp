@@ -11,7 +11,7 @@
 
 
 MIDIScreen::MIDIScreen() :colorWhiteKey(0x00001A80), colorBlackKey(0x00001A80),
-colorWhiteKeyPressed(0x00FFFF00), colorBlackKeyPressed(0x00FFFF00), presentPressure(true), presentProgram(false)
+colorWhiteKeyPressed(keyColors[0]), colorBlackKeyPressed(keyColors[0]), presentPressure(true), presentProgram(false)
 {
 	SetRectangle(0, 0, 640);
 	ZeroMemory(chPrograms, ARRAYSIZE(chPrograms));
@@ -95,7 +95,7 @@ int MIDIScreen::tableBlackKey[] = {
 };
 
 int MIDIScreen::keyColors[8] = {
-	0x00FFFF00,0x0000FF00,0x0000FFFF,0x000000FF,
+	0x00FFFF00,0x0000FF00,0x0000FFFF,0x008090FF,
 	0x00FF00FF,0x00FF0000,0x00FF7F3F,0x00FF007F
 };
 
