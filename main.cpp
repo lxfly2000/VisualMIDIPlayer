@@ -63,13 +63,189 @@ private:
 	TCHAR szTimeInfo[80];
 	TCHAR szLastTick[12] = TEXT("1:01:000");
 	bool helpOpened = false;
+	int showProgram = 0;//0=不显示，1=显示音色号，2=显示音色名，3=全部显示
 	int drawHelpLabelX, drawHelpLabelY, drawHelpX, drawHelpY;
+	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 
 	int stepsperbar = 4;
 };
 
-TCHAR helpLabel[] = TEXT("F1:帮助");
-TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色 I: 显示MIDI数据\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\nShift+1,2...6: 静音/取消静音第11,12...16通道\n\n按F1关闭帮助。");
+const TCHAR helpLabel[] = TEXT("F1:帮助");
+const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色 I: 显示MIDI数据\n"
+	"R: 显示音色 F11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\nShift+1,2...6: 静音/取消静音第11,12...16通道\n\n按F1关闭帮助。");
+TCHAR programName[][30] = {
+L"Acoustic Grand Piano",
+L"Bright Acoustic Piano",
+L"Electric Grand Piano",
+L"Honky-tonk Piano",
+L"Electric Piano 1",
+L"Electric Piano 2",
+L"Harpsichord",
+L"Clavi",
+L"Celesta",
+L"Glockenspiel",
+L"Music Box",
+L"Vibraphone",
+L"Marimba",
+L"Xylophone",
+L"Tubular Bells",
+L"Dulcimer",
+L"Drawbar Organ",
+L"Percussive Organ",
+L"Rock Organ",
+L"Church Organ",
+L"Reed Organ",
+L"Accordion",
+L"Harmonica",
+L"Tango Accordion",
+L"Acoustic Guitar (nylon)",
+L"Acoustic Guitar (steel)",
+L"Electric Guitar (jazz)",
+L"Electric Guitar (clean)",
+L"Electric Guitar (muted)",
+L"Overdriven Guitar",
+L"Distortion Guitar",
+L"Guitar harmonics",
+L"Acoustic Bass",
+L"Electric Bass (finger)",
+L"Electric Bass (pick)",
+L"Fretless Bass",
+L"Slap Bass 1",
+L"Slap Bass 2",
+L"Synth Bass 1",
+L"Synth Bass 2",
+L"Violin",
+L"Viola",
+L"Cello",
+L"Contrabass",
+L"Tremolo Strings",
+L"Pizzicato Strings",
+L"Orchestral Harp",
+L"Timpani",
+L"String Ensemble 1",
+L"String Ensemble 2",
+L"SynthStrings 1",
+L"SynthStrings 2",
+L"Choir Aahs",
+L"Voice Oohs",
+L"Synth Voice",
+L"Orchestra Hit",
+L"Trumpet",
+L"Trombone",
+L"Tuba",
+L"Muted Trumpet",
+L"French Horn",
+L"Brass Section",
+L"SynthBrass 1",
+L"SynthBrass 2",
+L"Soprano Sax",
+L"Alto Sax",
+L"Tenor Sax",
+L"Baritone Sax",
+L"Oboe",
+L"English Horn",
+L"Bassoon",
+L"Clarinet",
+L"Piccolo",
+L"Flute",
+L"Recorder",
+L"Pan Flute",
+L"Blown Bottle",
+L"Shakuhachi",
+L"Whistle",
+L"Ocarina",
+L"Lead 1 (square)",
+L"Lead 2 (sawtooth)",
+L"Lead 3 (calliope)",
+L"Lead 4 (chiff)",
+L"Lead 5 (charang)",
+L"Lead 6 (voice)",
+L"Lead 7 (fifths)",
+L"Lead 8 (bass + lead)",
+L"Pad 1 (new age)",
+L"Pad 2 (warm)",
+L"Pad 3 (polysynth)",
+L"Pad 4 (choir)",
+L"Pad 5 (bowed)",
+L"Pad 6 (metallic)",
+L"Pad 7 (halo)",
+L"Pad 8 (sweep)",
+L"FX 1 (rain)",
+L"FX 2 (soundtrack)",
+L"FX 3 (crystal)",
+L"FX 4 (atmosphere)",
+L"FX 5 (brightness)",
+L"FX 6 (goblins)",
+L"FX 7 (echoes)",
+L"FX 8 (sci-fi)",
+L"Sitar",
+L"Banjo",
+L"Shamisen",
+L"Koto",
+L"Kalimba",
+L"Bag pipe",
+L"Fiddle",
+L"Shanai",
+L"Tinkle Bell",
+L"Agogo",
+L"Steel Drums",
+L"Woodblock",
+L"Taiko Drum",
+L"Melodic Tom",
+L"Synth Drum",
+L"Reverse Cymbal",
+L"Guitar Fret Noise",
+L"Breath Noise",
+L"Seashore",
+L"Bird Tweet",
+L"Telephone Ring",
+L"Helicopter",
+L"Applause",
+L"Gunshot"
+};
+TCHAR drumName[][30] = {
+L"0 Standard",
+L"1 Standard 2",
+L"2 Standard L/R",
+L"8 Room",
+L"9 Hip Hop",
+L"10 Jungle",
+L"11 Techno",
+L"12 Room L/R",
+L"13 House",
+L"16 Power",
+L"24 Electronic",
+L"25 TR-808",
+L"26 Dance",
+L"27 CR-78",
+L"28 TR-606",
+L"29 TR-707",
+L"30 TR-909",
+L"32 Jazz",
+L"33 Jazz L/R",
+L"40 Brush",
+L"41 Brush 2",
+L"42 Brush 2 L/R",
+L"48 Orchestra",
+L"49 Ethnic",
+L"50 Kick & Snare",
+L"51 Kick & Snare 2",
+L"52 Asia",
+L"53 Cymbal & Claps",
+L"54 Gamelan",
+L"55 Gamelan 2",
+L"56 SFX",
+L"57 Rhythm FX",
+L"58 Rhythm FX 2",
+L"59 Rhythm FX 3",
+L"60 SFX 2",
+L"61 Voice",
+L"62 Cymbal & Claps 2",
+L"127 CM-64/32"
+};
+#include<vector>
+#include<string>
+std::vector<std::wstring>mapDrumName;
 
 VMPlayer* VMPlayer::_pObj = nullptr;
 WNDPROC VMPlayer::dxProcess = nullptr;
@@ -154,7 +330,11 @@ int VMPlayer::Init(TCHAR* param)
 	pmp->SetOnProgramChange([](int ch, int prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
-	ms.SetRectangle(4, GetFontSize() + 4, hdpi.X(w) - 8, posYLowerText - (GetFontSize() + 4));
+	drawProgramX = 4;
+	drawProgramY = GetFontSize() + 4;
+	drawProgramOneChannelH = posYLowerText - (GetFontSize() + 4);
+	ms.SetRectangle(drawProgramX, drawProgramY, hdpi.X(w) - 8, drawProgramOneChannelH);
+	drawProgramOneChannelH /= 16;
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 
 	if (strlenDx(param))
@@ -175,6 +355,27 @@ int VMPlayer::Init(TCHAR* param)
 	GetDrawStringSize(&drawHelpX, &drawHelpY, &lineCount, helpInfo, (int)strlenDx(helpInfo));
 	drawHelpX = (screenWidth - drawHelpX) / 2;
 	drawHelpY = (screenHeight - drawHelpY) / 2;
+
+	for (int i = 0; i < ARRAYSIZE(programName); i++)
+	{
+		TCHAR tmp[30];
+		wsprintf(tmp, TEXT("%3d %s"), i, programName[i]);
+		lstrcpy(programName[i], tmp);
+	}
+	for (int i = 0; i < ARRAYSIZE(drumName); i++)
+	{
+		TCHAR buf[24],buf2[30];
+		unsigned n;
+		sscanfDx(drumName[i], TEXT("%d %[^\n]"), &n, buf);
+		wsprintf(buf2, TEXT("%3d %s"), n, buf);
+		while (mapDrumName.size() < n)
+		{
+			TCHAR buf3[4];
+			wsprintf(buf3, TEXT("%3d"), mapDrumName.size());
+			mapDrumName.push_back(buf3);
+		}
+		mapDrumName.push_back(buf2);
+	}
 
 	//http://nut-softwaredevelopper.hatenablog.com/entry/2016/02/25/001647
 	hWindowDx = GetMainWindowHandle();
@@ -323,6 +524,29 @@ void VMPlayer::OnDraw()
 	ms.Draw();
 	DrawTime();
 	DrawString(0, posYLowerText, szStr, 0x00FFFFFF);
+	if (showProgram)
+	{
+		for (int i = 0; i < 16; i++)
+		{
+			LPCTSTR p;
+			if (i == 9)
+				p = mapDrumName[ms.chPrograms[i]].c_str();
+			else
+				p = programName[ms.chPrograms[i]];
+			switch (showProgram)
+			{
+			case 1:
+				DrawNString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p, 3, 0x00FFFFFF);
+				break;
+			case 2:
+				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p + 4, 0x00FFFFFF);
+				break;
+			case 3:
+				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p, 0x00FFFFFF);
+				break;
+			}
+		}
+	}
 	if (helpOpened)
 		DrawString(drawHelpX, drawHelpY, helpInfo, 0x00FFFFFF);
 	else
@@ -475,6 +699,8 @@ void VMPlayer::OnLoop()
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_F1))
 		helpOpened = !helpOpened;
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_R))
+		showProgram = (showProgram + 1) % 4;
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
