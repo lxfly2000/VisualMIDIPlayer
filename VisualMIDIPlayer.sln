@@ -5,6 +5,10 @@ VisualStudioVersion = 16.0.29123.88
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VisualMIDIPlayer", "VisualMIDIPlayer.vcxproj", "{7944ED33-35F3-4B03-A1FB-F1AA17E2CC2D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MidiPlayer", "libMidiPlayer\MIDIPlayer.vcxproj", "{01E92B7C-8942-4C44-98A7-9F9CA97E683B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "midifile", "libMidiPlayer\midifile.vcxproj", "{7F98F2E2-CCED-470C-B5C3-FB337693B13A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +25,22 @@ Global
 		{7944ED33-35F3-4B03-A1FB-F1AA17E2CC2D}.Release|x64.Build.0 = Release|x64
 		{7944ED33-35F3-4B03-A1FB-F1AA17E2CC2D}.Release|x86.ActiveCfg = Release|Win32
 		{7944ED33-35F3-4B03-A1FB-F1AA17E2CC2D}.Release|x86.Build.0 = Release|Win32
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Debug|x64.ActiveCfg = Debug|x64
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Debug|x64.Build.0 = Debug|x64
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Debug|x86.ActiveCfg = Debug|Win32
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Debug|x86.Build.0 = Debug|Win32
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Release|x64.ActiveCfg = Release|x64
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Release|x64.Build.0 = Release|x64
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Release|x86.ActiveCfg = Release|Win32
+		{01E92B7C-8942-4C44-98A7-9F9CA97E683B}.Release|x86.Build.0 = Release|Win32
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Debug|x64.ActiveCfg = Debug|x64
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Debug|x64.Build.0 = Debug|x64
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Debug|x86.ActiveCfg = Debug|Win32
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Debug|x86.Build.0 = Debug|Win32
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x64.ActiveCfg = Release|x64
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x64.Build.0 = Release|x64
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x86.ActiveCfg = Release|Win32
+		{7F98F2E2-CCED-470C-B5C3-FB337693B13A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

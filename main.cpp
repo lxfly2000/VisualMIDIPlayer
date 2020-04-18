@@ -60,7 +60,7 @@ private:
 	bool loopIncludeStart = false, loopIncludeEnd = true;
 	TCHAR filepath[MAX_PATH] = L"";
 	TCHAR szStr[156];
-	TCHAR szTimeInfo[80];
+	TCHAR szTimeInfo[100];
 	TCHAR szLastTick[12] = TEXT("1:01:000");
 	bool helpOpened = false;
 	int showProgram = 0;//0=不显示，1=显示音色号，2=显示音色名，3=全部显示
@@ -71,8 +71,9 @@ private:
 };
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
-const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色 I: 显示MIDI数据\n"
-	"R: 显示音色 F11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\nShift+1,2...6: 静音/取消静音第11,12...16通道\n←/→: 定位\n\n按F1关闭帮助。");
+const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n"
+	"R: 显示音色\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
+	"Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n按F1关闭帮助。");
 TCHAR programName[][30] = {
 L"Acoustic Grand Piano",
 L"Bright Acoustic Piano",
@@ -424,7 +425,7 @@ bool VMPlayer::OnLoadMIDI(TCHAR* path)
 
 void VMPlayer::OnCommandPlay()
 {
-	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true);
+	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true, !CheckHitKey(KEY_INPUT_LSHIFT) && !CheckHitKey(KEY_INPUT_RSHIFT));
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 }
 
@@ -512,9 +513,9 @@ void VMPlayer::DrawTime()
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szTimeInfo, TEXT("BPM:%5.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件：%5d/%d 复音数：%2d"), pmp->GetBPM(),
+	swprintf_s(szTimeInfo, TEXT("BPM:%7.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件:%6d/%d 复音:%3d 丢失：%d"), pmp->GetBPM(),
 		minute, second, millisec, bar, step, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
-		pmp->GetPolyphone());
+		pmp->GetPolyphone(),pmp->GetDrop());
 	DrawString(0, 0, szTimeInfo, 0x00FFFFFF);
 }
 
