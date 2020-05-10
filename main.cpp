@@ -391,7 +391,7 @@ int VMPlayer::End()
 	pmp->Stop();
 	pmp->Unload();
 	delete pmp;
-	return DxLib_End();
+	return 0;//DxLib_End();//Win7系统会莫名崩溃
 }
 
 void VMPlayer::Run()
