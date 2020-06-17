@@ -320,6 +320,7 @@ int VMPlayer::Init(TCHAR* param)
 	SetFontSize(hdpi.X(14));
 	if (hdpi.X(14) > 14)ChangeFontType(DX_FONTTYPE_ANTIALIASING);
 	SetFontThickness(3);
+	SetWindowSizeExtendRate(1.0, 1.0);
 	GetDrawScreenSize(&screenWidth, &screenHeight);
 	if (DxLib_Init() != 0)return -1;
 	SetDrawScreen(DX_SCREEN_BACK);
@@ -452,15 +453,22 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 	UnicodeToGBK(p, ARRAYSIZE(p), path);
 	if (!pmp->LoadFile(p))
 	{
-#ifdef _UNICODE
+/*#ifdef _UNICODE
 #define _T_RENAME _wrename
 #else
 #define _T_RENAME rename
-#endif
-		if (_T_RENAME(path, TEXT(VMP_TEMP_FILENAME)))return false;
+#endif*/
+		std::fstream f(path, std::ios::in | std::ios::binary);
+		std::stringstream filemem;
+		if (!f)
+			return false;
+		filemem << f.rdbuf();
+		if (!pmp->LoadStream(filemem))
+			return false;
+		/*if (_T_RENAME(path, TEXT(VMP_TEMP_FILENAME)))return false;
 		bool ok = pmp->LoadFile(VMP_TEMP_FILENAME);
 		_T_RENAME(TEXT(VMP_TEMP_FILENAME), path);//特么……这样居然可以！！！（惊）
-		if (!ok)return false;
+		if (!ok)return false;*/
 	}
 	sprintfDx(loopfilepath, TEXT("%s.txt"), path);
 	int hLoopFile = FileRead_open(loopfilepath);
