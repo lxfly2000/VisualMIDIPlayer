@@ -21,6 +21,15 @@
     <ClCompile Include="MIDIScreen.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="DxShell.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="DxKeyTrigger.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ResLoader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MIDIScreen.h">
@@ -29,12 +38,27 @@
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="DxShell.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DxKeyTrigger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ResLoader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="resource1.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="VisualMIDIPlayer.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="Strings.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>

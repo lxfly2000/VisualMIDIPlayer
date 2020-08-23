@@ -1,6 +1,9 @@
 #include<DxLib.h>
 #include<MidiPlayer.h>
 #include"MIDIScreen.h"
+#include"DxShell.h"
+#include"ResLoader.h"
+#include"resource1.h"
 
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
 
@@ -315,10 +318,13 @@ int VMPlayer::Init(TCHAR* param)
 	ChangeWindowMode(windowed = TRUE);
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
+	bool useHighDpi = hdpi.X(14) > 14;
 	SetGraphMode(hdpi.X(w), hdpi.Y(h), 32);
 	ChangeFont(TEXT("SimSun"));
 	SetFontSize(hdpi.X(14));
-	if (hdpi.X(14) > 14)ChangeFontType(DX_FONTTYPE_ANTIALIASING);
+	if (useHighDpi)
+		ChangeFontType(DX_FONTTYPE_ANTIALIASING);
+	DxShellSetUseHighDpi(useHighDpi);
 	SetFontThickness(3);
 	SetWindowSizeExtendRate(1.0, 1.0);
 	GetDrawScreenSize(&screenWidth, &screenHeight);
@@ -619,8 +625,7 @@ void VMPlayer::OnLoop()
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_O))
 	{
-		if (!windowed)ChangeWindowMode(windowed = TRUE);
-		if (SelectFile(filepath, NULL))
+		if (windowed ? SelectFile(filepath, NULL) : DxChooseFilePath(filepath, filepath))
 			OnLoadMIDI(filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_E))
@@ -685,7 +690,10 @@ void VMPlayer::OnLoop()
 				}
 				metalist.pop_front();
 			}
-			ShellMessageBox(NULL, hWindowDx, metainfo.c_str(), L"MIDI数据", MB_ICONINFORMATION);
+			if (windowed)
+				ShellMessageBox(NULL, hWindowDx, metainfo.c_str(), L"MIDI数据", MB_ICONINFORMATION);
+			else
+				DxMessageBox((metainfo + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
 		}
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_LEFT))OnSeekBar(-1);

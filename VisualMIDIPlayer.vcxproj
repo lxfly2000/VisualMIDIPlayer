@@ -174,17 +174,25 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DxKeyTrigger.cpp" />
+    <ClCompile Include="DxShell.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MIDIScreen.cpp" />
+    <ClCompile Include="ResLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DxKeyTrigger.h" />
+    <ClInclude Include="DxShell.h" />
     <ClInclude Include="MIDIScreen.h" />
+    <ClInclude Include="ResLoader.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="resource1.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="Strings.rc" />
     <ResourceCompile Include="VisualMIDIPlayer.rc" />
   </ItemGroup>
   <ItemGroup>
