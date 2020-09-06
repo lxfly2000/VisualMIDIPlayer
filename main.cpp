@@ -597,13 +597,14 @@ void VMPlayer::DrawTime()
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szTimeInfo, TEXT("BPM:%7.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件:%6d/%d 复音:%3d 丢失："), pmp->GetBPM(),
-		minute, second, millisec, bar, step, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
-		pmp->GetPolyphone());
+	TCHAR szDrop[12];
 	if (isNonDropPlay)
-		strcatDx(szTimeInfo, TEXT("-"));
+		strcpyDx(szDrop, TEXT("-"));
 	else
-		sprintfDx(szTimeInfo + strlenDx(szTimeInfo), TEXT("%d"), pmp->GetDrop());
+		sprintfDx(szDrop, TEXT("%d"), pmp->GetDrop());
+	swprintf_s(szTimeInfo, TEXT("BPM:%7.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件:%6d/%d 复音:%3d 丢失：%s"), pmp->GetBPM(),
+		minute, second, millisec, bar, step, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
+		pmp->GetPolyphone(),szDrop);
 	DrawString(0, 0, szTimeInfo, 0x00FFFFFF);
 }
 
