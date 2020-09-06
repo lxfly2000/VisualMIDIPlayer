@@ -480,6 +480,14 @@ void VMPlayer::_OnSysExCallback(PBYTE data, size_t length)
 		ms.ChangeDefaultKeyColorByMIDIMode(1);
 	else if (memcmp_with_mask(data, XG_System_On, _XG_System_On_Mask, length) == 0)
 		ms.ChangeDefaultKeyColorByMIDIMode(2);
+	else
+		return;
+	for (int i = 0; i < 16; i++)
+	{
+		ms.chPrograms[i] = 0;
+		ms.chCC0[i] = 0;
+		ms.chCC32[i] = 0;
+	}
 }
 
 bool VMPlayer::OnLoadMIDI(TCHAR* path)
