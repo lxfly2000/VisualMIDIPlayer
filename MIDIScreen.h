@@ -42,6 +42,8 @@ private:
 	static int keyColors[];
 public:
 	bool presentProgram;
-	int chPrograms[16];
+	int chPrograms[16], chCC0[16], chCC32[16];
+	//0=GM 1=GS 2=XG 3=GM2
+	void ChangeDefaultKeyColorByMIDIMode(int midiMode);
 };
 

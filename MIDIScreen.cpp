@@ -9,12 +9,19 @@
 #define KEY_START 0
 #define KEY_END 127
 
+#define KEY_COLOR_GM 0x00001A80
+#define KEY_COLOR_GS 0x004C2501
+#define KEY_COLOR_XG 0x00004028
+#define KEY_COLOR_GM2 0x00353837
 
-MIDIScreen::MIDIScreen() :colorWhiteKey(0x00001A80), colorBlackKey(0x00001A80),
+
+MIDIScreen::MIDIScreen() :colorWhiteKey(KEY_COLOR_GM), colorBlackKey(KEY_COLOR_GM),
 colorWhiteKeyPressed(keyColors[0]), colorBlackKeyPressed(keyColors[0]), presentPressure(true), presentProgram(false)
 {
 	SetRectangle(0, 0, 640);
 	ZeroMemory(chPrograms, ARRAYSIZE(chPrograms));
+	ZeroMemory(chCC0, ARRAYSIZE(chCC0));
+	ZeroMemory(chCC32, ARRAYSIZE(chCC32));
 }
 
 void MIDIScreen::Draw()
@@ -159,4 +166,23 @@ void MIDIScreen::SetBlackKeyPressedColor(int color)
 void MIDIScreen::SetPresentPressure(bool b)
 {
 	presentPressure = b;
+}
+
+void MIDIScreen::ChangeDefaultKeyColorByMIDIMode(int midiMode)
+{
+	switch (midiMode)
+	{
+	case 0:default://GM
+		colorWhiteKey = colorBlackKey = KEY_COLOR_GM;
+		break;
+	case 1://GS
+		colorWhiteKey = colorBlackKey = KEY_COLOR_GS;
+		break;
+	case 2://XG
+		colorWhiteKey = colorBlackKey = KEY_COLOR_XG;
+		break;
+	case 3://GM2
+		colorWhiteKey = colorBlackKey = KEY_COLOR_GM2;
+		break;
+	}
 }

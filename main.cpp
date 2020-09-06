@@ -32,6 +32,8 @@ public:
 protected:
 	void _OnFinishPlayCallback();
 	void _OnProgramChangeCallback(int channel, int program);
+	void _OnControlChangeCallback(int channel, int cc, int val);
+	void _OnSysExCallback(PBYTE data,size_t length);
 	bool OnLoadMIDI(TCHAR*);
 	void OnCommandPlay();
 	void OnDrop(HDROP);
@@ -64,11 +66,11 @@ private:
 	TCHAR filepath[MAX_PATH] = L"";
 	TCHAR szStr[156];
 	TCHAR szTimeInfo[100];
-	TCHAR szLastTick[12] = TEXT("1:01:000");
-	bool helpOpened = false;
-	int showProgram = 0;//0=不显示，1=显示音色号，2=显示音色名，3=全部显示
-	int drawHelpLabelX, drawHelpLabelY, drawHelpX, drawHelpY;
+	TCHAR szLastTick[12] = TEXT("0:00:000");
+	int showProgram = 0;//0=不显示，1=显示3列音色号，2=显示音色名，3=显示1列音色号和音色名，4=全部显示
+	int drawHelpLabelX, drawHelpLabelY;
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
+	bool isNonDropPlay = false;
 
 	int stepsperbar = 4;
 };
@@ -76,7 +78,11 @@ private:
 const TCHAR helpLabel[] = TEXT("F1:帮助");
 const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n"
 	"R: 显示音色\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
-	"Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n按F1关闭帮助。");
+	"Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n"
+	"屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n"
+	"屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n"
+	"制作：lxfly2000\nhttps://github.com/lxfly2000/VisualMIDIPlayer"
+);
 TCHAR programName[][30] = {
 L"Acoustic Grand Piano",
 L"Bright Acoustic Piano",
@@ -335,7 +341,9 @@ int VMPlayer::Init(TCHAR* param)
 
 	pmp = new MidiPlayer(strlenDx(param) ? MIDI_MAPPER : ChooseDevice());
 	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
-	pmp->SetOnProgramChange([](int ch, int prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
+	pmp->SetOnProgramChange([](BYTE ch, BYTE prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
+	pmp->SetOnControlChange([](BYTE ch, BYTE cc, BYTE val) {VMPlayer::_pObj->_OnControlChangeCallback(ch, cc, val); });
+	pmp->SetOnSysEx([](PBYTE data, size_t length) {VMPlayer::_pObj->_OnSysExCallback(data, length); });
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
 	drawProgramX = 4;
@@ -360,9 +368,6 @@ int VMPlayer::Init(TCHAR* param)
 	GetDrawStringSize(&drawHelpLabelX, &drawHelpLabelY, &lineCount, helpLabel, (int)strlenDx(helpLabel));
 	drawHelpLabelX = screenWidth - drawHelpLabelX;
 	drawHelpLabelY = 0;
-	GetDrawStringSize(&drawHelpX, &drawHelpY, &lineCount, helpInfo, (int)strlenDx(helpInfo));
-	drawHelpX = (screenWidth - drawHelpX) / 2;
-	drawHelpY = (screenHeight - drawHelpY) / 2;
 
 	for (int i = 0; i < ARRAYSIZE(programName); i++)
 	{
@@ -379,7 +384,7 @@ int VMPlayer::Init(TCHAR* param)
 		while (mapDrumName.size() < n)
 		{
 			TCHAR buf3[4];
-			wsprintf(buf3, TEXT("%3d"), mapDrumName.size());
+			wsprintf(buf3, TEXT("%3d"), (int)mapDrumName.size());
 			mapDrumName.push_back(buf3);
 		}
 		mapDrumName.push_back(buf2);
@@ -421,6 +426,62 @@ void VMPlayer::_OnProgramChangeCallback(int channel, int program)
 	ms.chPrograms[channel] = program;
 }
 
+void VMPlayer::_OnControlChangeCallback(int channel, int cc, int val)
+{
+	switch (cc)
+	{
+	case 0:
+		ms.chCC0[channel] = val;
+		break;
+	case 32:
+		ms.chCC32[channel] = val;
+		break;
+	}
+}
+
+int memcmp_with_mask(LPCVOID a, LPCVOID b, LPCVOID mask, size_t length)
+{
+	LPCBYTE ba = (LPCBYTE)a;
+	LPCBYTE bb = (LPCBYTE)b;
+	LPCBYTE bmask = (LPCBYTE)mask;
+	for (size_t i = 0; i < length; i++)
+	{
+		int ma = ba[i] & bmask[i];
+		int mb = bb[i] & bmask[i];
+		if (ma - mb)
+			return ma - mb;
+	}
+	return 0;
+}
+
+void VMPlayer::_OnSysExCallback(PBYTE data, size_t length)
+{
+	static const BYTE GM1_System_On[] = { 0xF0,0x7E,0x7F,0x09,0x01,0xF7 };//切换至GM（根据VSC文档）
+	static const BYTE GM2_System_On[] = { 0xF0,0x7E,0x7F,0x09,0x03,0xF7 };//切换至GM2（根据VSC文档）
+	static const BYTE GM_System_Off[] = { 0xF0,0x7E,0x7F,0x09,0x02,0xF7 };//切换至GS（根据VSC文档）
+	static const BYTE GS_Reset[] = { 0xF0,0x41,0x00/*0x00-0x1F*/,0x42,0x12,0x40,0x00,0x7F,0x00,0x41,0xF7 };//切换至GS（根据VSC文档）
+	static const BYTE _GS_Reset_Mask[] = { 0xFF,0xFF,0xE0,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
+	static const BYTE GS_Exit[] = { 0xF0,0x41,0x00/*0x00-0x1F*/,0x42,0x12,0x40,0x00,0x7F,0x7F,0x42,0xF7 };//切换至GM（根据VSC文档）
+	static const BYTE System_Mode_Set[] = { 0xF0,0x41,0x00/*0x00-0x1F*/,0x42,0x12,0x00,0x00,0x7F,0x00/*0x00-0xFF*/,0x00/*0x00-0xFF*/,0xF7 };//切换至GS（根据VSC文档）
+	static const BYTE _System_Mode_Set_Mask[] = { 0xFF,0xFF,0xE0,0xFF,0xFF,0xFF,0xFF,0xFF,0x00,0x00,0xFF };
+	static const BYTE XG_System_On[] = { 0xF0,0x43,0x10/*0x10-0x1F*/,0x4C,0x00,0x00,0x7E,0x00,0xF7 };//切换至XG（根据S-YXG50文档）
+	static const BYTE _XG_System_On_Mask[] = { 0xFF,0xFF,0xF0,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
+	if (memcmp(data, GM1_System_On, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(0);
+	else if (memcmp(data, GM2_System_On, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(3);
+	else if (memcmp(data, GM_System_Off, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(1);
+	else if (memcmp_with_mask(data, GS_Reset, _GS_Reset_Mask, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(1);
+	else if (memcmp_with_mask(data, GS_Exit, _GS_Reset_Mask, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(0);
+	else if (memcmp_with_mask(data, System_Mode_Set, _System_Mode_Set_Mask, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(1);
+	else if (memcmp_with_mask(data, XG_System_On, _XG_System_On_Mask, length) == 0)
+		ms.ChangeDefaultKeyColorByMIDIMode(2);
+}
+
 bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
 	bool ok = true;
@@ -432,7 +493,8 @@ bool VMPlayer::OnLoadMIDI(TCHAR* path)
 
 void VMPlayer::OnCommandPlay()
 {
-	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true, !CheckHitKey(KEY_INPUT_LSHIFT) && !CheckHitKey(KEY_INPUT_RSHIFT));
+	isNonDropPlay = CheckHitKey(KEY_INPUT_LSHIFT) || CheckHitKey(KEY_INPUT_RSHIFT);
+	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true, !isNonDropPlay);
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 }
 
@@ -527,9 +589,13 @@ void VMPlayer::DrawTime()
 	tick %= pmp->GetQuarterNoteTicks();
 	bar = step / stepsperbar;
 	step %= stepsperbar;
-	swprintf_s(szTimeInfo, TEXT("BPM:%7.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件:%6d/%d 复音:%3d 丢失：%d"), pmp->GetBPM(),
+	swprintf_s(szTimeInfo, TEXT("BPM:%7.3f 时间：%d:%02d.%03d Tick:%3d:%d:%03d/%s 事件:%6d/%d 复音:%3d 丢失："), pmp->GetBPM(),
 		minute, second, millisec, bar, step, tick, szLastTick, pmp->GetPosEventNum(), pmp->GetEventCount(),
-		pmp->GetPolyphone(),pmp->GetDrop());
+		pmp->GetPolyphone());
+	if (isNonDropPlay)
+		strcatDx(szTimeInfo, TEXT("-"));
+	else
+		sprintfDx(szTimeInfo + strlenDx(szTimeInfo), TEXT("%d"), pmp->GetDrop());
 	DrawString(0, 0, szTimeInfo, 0x00FFFFFF);
 }
 
@@ -548,10 +614,13 @@ void VMPlayer::OnDraw()
 				p = mapDrumName[ms.chPrograms[i]].c_str();
 			else
 				p = programName[ms.chPrograms[i]];
+			TCHAR pMode1[50];
 			switch (showProgram)
 			{
 			case 1:
-				DrawNString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p, 3, 0x00FFFFFF);
+				strncpyDx(pMode1, p, 3);
+				sprintfDx(pMode1 + 3, TEXT(" %3d %3d"), ms.chCC0[i] & 0xFF, ms.chCC32[1] & 0xFF);
+				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, pMode1, 0x00FFFFFF);
 				break;
 			case 2:
 				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p + 4, 0x00FFFFFF);
@@ -559,13 +628,16 @@ void VMPlayer::OnDraw()
 			case 3:
 				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p, 0x00FFFFFF);
 				break;
+			case 4:
+				strncpyDx(pMode1, p, 3);
+				sprintfDx(pMode1 + 3, TEXT(" %3d %3d"), ms.chCC0[i] & 0xFF, ms.chCC32[1] & 0xFF);
+				strcatDx(pMode1, p + 3);
+				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, pMode1, 0x00FFFFFF);
+				break;
 			}
 		}
 	}
-	if (helpOpened)
-		DrawString(drawHelpX, drawHelpY, helpInfo, 0x00FFFFFF);
-	else
-		DrawString(drawHelpLabelX, drawHelpLabelY, helpLabel, 0x00FFFFFF);
+	DrawString(drawHelpLabelX, drawHelpLabelY, helpLabel, 0x00FFFFFF);
 	ScreenFlip();
 }
 
@@ -715,9 +787,14 @@ void VMPlayer::OnLoop()
 		}
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_F1))
-		helpOpened = !helpOpened;
+	{
+		if (windowed)
+			MessageBox(hWindowDx, helpInfo, TEXT("帮助"), MB_ICONINFORMATION);
+		else
+			DxMessageBox((std::basic_string<TCHAR>(helpInfo) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
+	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_R))
-		showProgram = (showProgram + 1) % 4;
+		showProgram = (showProgram + 1) % 5;
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
@@ -755,7 +832,7 @@ void VMPlayer::OnSeekBar(int dbars)
 }
 
 #ifdef _UNICODE
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
+int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
 #else
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 #endif
