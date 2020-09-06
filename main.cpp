@@ -71,6 +71,7 @@ private:
 	int drawHelpLabelX, drawHelpLabelY;
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 	bool isNonDropPlay = false;
+	bool fileLoadOK = false;
 
 	int stepsperbar = 4;
 };
@@ -492,11 +493,11 @@ void VMPlayer::_OnSysExCallback(PBYTE data, size_t length)
 
 bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
-	bool ok = true;
-	if (!LoadMIDI(path))ok = false;
-	if (!ok)strcatDx(path, TEXT("（无效文件）"));
+	fileLoadOK = true;
+	if (!LoadMIDI(path))fileLoadOK = false;
+	if (!fileLoadOK)strcatDx(path, TEXT("（无效文件）"));
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path);
-	return ok;
+	return fileLoadOK;
 }
 
 void VMPlayer::OnCommandPlay()
@@ -751,7 +752,7 @@ void VMPlayer::OnLoop()
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_I))
 	{
 		std::list<MIDIMetaStructure> metalist;
-		if (pmp->GetMIDIMeta(metalist))
+		if (fileLoadOK&&pmp->GetMIDIMeta(metalist))
 		{
 			std::wstring metainfo;
 			const TCHAR metatype[7][4] = { L"文　本",L"版　权",L"序列名",L"乐器名",L"歌　词",L"标　记",L"ＣＵＥ" };
