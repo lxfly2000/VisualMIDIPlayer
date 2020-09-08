@@ -620,6 +620,8 @@ void VMPlayer::ReChooseMIDIDevice()
 	{
 		EndMIDIPlayer();
 		InitMIDIPlayer(id);
+		if (filepath[0])
+			OnLoadMIDI(filepath);
 	}
 }
 
