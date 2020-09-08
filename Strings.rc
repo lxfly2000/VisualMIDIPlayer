@@ -89,6 +89,8 @@ END
 STRINGTABLE
 BEGIN
     IDS_CANCEL              "Cancel"
+    IDS_DXGUI_CHOOSELIST_MSG_DEFAULT 
+                            "Choose\n[Arrow Keys]Move [Enter]OK [Esc]Cancel"
 END
 
 #endif    // 非特定语言(默认值) resources
@@ -193,6 +195,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_CANCEL              "取消"
+    IDS_DXGUI_CHOOSELIST_MSG_DEFAULT "选择\n[方向键]移动 [Enter]确定 [Esc]取消"
 END
 
 #endif    // 中文(简体，中国) resources

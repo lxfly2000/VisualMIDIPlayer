@@ -4,6 +4,7 @@
 #include"DxShell.h"
 #include"ResLoader.h"
 #include"resource1.h"
+#include"ChooseList.h"
 
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
 
@@ -29,6 +30,8 @@ public:
 	int Init(TCHAR* param);
 	void Run();
 	int End();
+	int InitMIDIPlayer(UINT deviceId);
+	int EndMIDIPlayer();
 protected:
 	void _OnFinishPlayCallback();
 	void _OnProgramChangeCallback(int channel, int program);
@@ -43,6 +46,7 @@ private:
 	static LRESULT CALLBACK ExtraProcess(HWND, UINT, WPARAM, LPARAM);
 	static WNDPROC dxProcess;
 	HWND hWindowDx;
+	//当返回-2时为取消操作，其他为选择的设备ID
 	unsigned ChooseDevice();
 	void OnDraw();
 	void OnLoop();
@@ -50,8 +54,9 @@ private:
 	void DrawTime();
 	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path);
 	void UpdateTextLastTick();
+	void ReChooseMIDIDevice();
 	MIDIScreen ms;
-	MidiPlayer* pmp;
+	MidiPlayer* pmp = nullptr;
 	bool running = true;
 	bool sendlong;
 	bool loopOn = true;
@@ -78,7 +83,7 @@ private:
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
 const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n"
-	"R: 显示音色\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
+	"R: 显示音色\nD: 重新选择MIDI设备\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
 	"Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n"
 	"屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n"
 	"屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n"
@@ -266,29 +271,24 @@ unsigned VMPlayer::ChooseDevice()
 	unsigned nMidiDev = midiOutGetNumDevs(), cur = 0;
 	TCHAR str[120];
 	MIDIOUTCAPS caps;
-	bool loop = true;
 	if (nMidiDev > 1)
 	{
-		while (loop)
+		std::vector<const TCHAR*>midiList;
+		std::vector<std::basic_string<TCHAR>> midiListVector;
+		for (UINT i = 0; i < nMidiDev; i++)
 		{
-			if (ProcessMessage() == -1)loop = false;
-			ClearDrawScreen();
-			midiOutGetDevCaps(cur, &caps, sizeof caps);
-			sprintfDx(str, TEXT("Enter:确认 Esc:退出 ↑/↓:选择\n选择 MIDI 输出设备：[%2d]%s"), (int)cur, caps.szPname);
-			DrawString(0, posYLowerText, str, 0x00FFFFFF);
-			ScreenFlip();
-			switch (WaitKey())
-			{
-			case KEY_INPUT_UP:
-				if (cur != MIDI_MAPPER)cur--;
-				break;
-			case KEY_INPUT_DOWN:
-				if (cur != nMidiDev - 1)cur++;
-				break;
-			case KEY_INPUT_ESCAPE:running = loop = false; break;
-			case KEY_INPUT_RETURN:loop = false; break;
-			}
+			midiOutGetDevCaps(i, &caps, sizeof(caps));
+			sprintfDx(str, TEXT("[%d] %s"), i, caps.szPname);
+			midiListVector.push_back(str);
 		}
+		for (UINT i = 0; i < nMidiDev; i++)
+			midiList.push_back(midiListVector[i].c_str());
+		if (windowed)
+			cur = (UINT)ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), 0, NULL, NULL);
+		else
+			cur = (UINT)DxChooseListItem(TEXT("选择 MIDI 输出设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size());
+		if (cur == (UINT)-1)
+			cur = (UINT)-2;
 	}
 	return cur;
 }
@@ -308,13 +308,13 @@ int VMPlayer::Init(TCHAR* param)
 {
 	_pObj = this;
 	int w = 800, h = 600;
-	if (strcmpDx(param, TEXT("600p")) == 0)
+	if (strstrDx(param, TEXT("600p")))
 	{
 		w = 960;
 		h = 600;
 		param[0] = TEXT('\0');
 	}
-	else if (strcmpDx(param, TEXT("720p")) == 0)
+	else if (strstrDx(param, TEXT("720p")))
 	{
 		w = 1280;
 		h = 720;
@@ -322,7 +322,10 @@ int VMPlayer::Init(TCHAR* param)
 	}
 	SetOutApplicationLogValidFlag(FALSE);
 	SetWindowText(TEXT("Visual MIDI Player"));
-	ChangeWindowMode(windowed = TRUE);
+	windowed = strstrDx(param, TEXT("/f")) ? FALSE : TRUE;
+	if (!windowed)
+		param[0] = 0;
+	ChangeWindowMode(windowed);
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
 	bool useHighDpi = hdpi.X(14) > 14;
@@ -340,30 +343,11 @@ int VMPlayer::Init(TCHAR* param)
 
 	posYLowerText = screenHeight - (GetFontSize() + 4) * 2;
 
-	pmp = new MidiPlayer(strlenDx(param) ? MIDI_MAPPER : ChooseDevice());
-	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
-	pmp->SetOnProgramChange([](BYTE ch, BYTE prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
-	pmp->SetOnControlChange([](BYTE ch, BYTE cc, BYTE val) {VMPlayer::_pObj->_OnControlChangeCallback(ch, cc, val); });
-	pmp->SetOnSysEx([](PBYTE data, size_t length) {VMPlayer::_pObj->_OnSysExCallback(data, length); });
-	pmp->SetSendLongMsg(sendlong = true);
-	ms.SetPlayerSrc(pmp);
 	drawProgramX = 4;
 	drawProgramY = GetFontSize() + 4;
 	drawProgramOneChannelH = posYLowerText - (GetFontSize() + 4);
 	ms.SetRectangle(drawProgramX, drawProgramY, hdpi.X(w) - 8, drawProgramOneChannelH);
 	drawProgramOneChannelH /= 16;
-	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
-
-	if (strlenDx(param))
-	{
-		if (param[0] == TEXT('\"'))
-		{
-			strcpyDx(filepath, param + 1);
-			filepath[strlenDx(filepath) - 1] = TEXT('\0');
-		}
-		else strcpyDx(filepath, param);
-		if (OnLoadMIDI(filepath))OnCommandPlay();
-	}
 
 	int lineCount;
 	GetDrawStringSize(&drawHelpLabelX, &drawHelpLabelY, &lineCount, helpLabel, (int)strlenDx(helpLabel));
@@ -396,15 +380,55 @@ int VMPlayer::Init(TCHAR* param)
 	dxProcess = (WNDPROC)GetWindowLongPtr(hWindowDx, GWLP_WNDPROC);
 	SetWindowLongPtr(hWindowDx, GWL_EXSTYLE, WS_EX_ACCEPTFILES | GetWindowLongPtr(hWindowDx, GWL_EXSTYLE));
 	SetWindowLongPtr(hWindowDx, GWLP_WNDPROC, (LONG_PTR)ExtraProcess);
+
+	UINT retChoose = strlenDx(param) ? MIDI_MAPPER : ChooseDevice();
+	if (retChoose == (UINT)-2)
+		return -2;
+	InitMIDIPlayer(retChoose);
+
+	if (strlenDx(param))
+	{
+		if (param[0] == TEXT('\"'))
+		{
+			strcpyDx(filepath, param + 1);
+			filepath[strlenDx(filepath) - 1] = TEXT('\0');
+		}
+		else strcpyDx(filepath, param);
+		if (OnLoadMIDI(filepath))OnCommandPlay();
+	}
+
+	return 0;
+}
+
+int VMPlayer::InitMIDIPlayer(UINT deviceId)
+{
+	pmp = new MidiPlayer(deviceId);
+	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
+	pmp->SetOnProgramChange([](BYTE ch, BYTE prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
+	pmp->SetOnControlChange([](BYTE ch, BYTE cc, BYTE val) {VMPlayer::_pObj->_OnControlChangeCallback(ch, cc, val); });
+	pmp->SetOnSysEx([](PBYTE data, size_t length) {VMPlayer::_pObj->_OnSysExCallback(data, length); });
+	pmp->SetSendLongMsg(sendlong = true);
+	ms.SetPlayerSrc(pmp);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 	return 0;
 }
 
 int VMPlayer::End()
 {
-	pmp->Stop();
-	pmp->Unload();
-	delete pmp;
-	return 0;//DxLib_End();//Win7系统会莫名崩溃
+	//DxLib_End();//Win7系统会莫名崩溃
+	return EndMIDIPlayer();
+}
+
+int VMPlayer::EndMIDIPlayer()
+{
+	if (pmp)
+	{
+		pmp->Stop();
+		pmp->Unload();
+		delete pmp;
+		pmp = nullptr;
+	}
+	return 0;
 }
 
 void VMPlayer::Run()
@@ -579,6 +603,24 @@ void VMPlayer::UpdateTextLastTick()
 	bar = step / stepsperbar;
 	step %= stepsperbar;
 	swprintf_s(szLastTick, TEXT("%d:%d:%03d"), bar, step, tick);
+}
+
+void VMPlayer::ReChooseMIDIDevice()
+{
+	if (midiOutGetNumDevs() < 2)
+	{
+		if (windowed)
+			MessageBox(hWindowDx, TEXT("没有其他MIDI设备可以选择。"), NULL, MB_ICONEXCLAMATION);
+		else
+			DxMessageBox((std::basic_string<TCHAR>(TEXT("没有其他MIDI设备可以选择。")) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
+		return;
+	}
+	UINT id = ChooseDevice();
+	if ((int)id >= 0)
+	{
+		EndMIDIPlayer();
+		InitMIDIPlayer(id);
+	}
 }
 
 void VMPlayer::DrawTime()
@@ -786,6 +828,8 @@ void VMPlayer::OnLoop()
 		pmp->SetPlaybackSpeed(1.0f);
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_C))
 		pmp->SetPlaybackSpeed(pmp->GetPlaybackSpeed() / 2.0f);
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_D))
+		ReChooseMIDIDevice();
 	for (int i = KEY_INPUT_1; i <= KEY_INPUT_0; i++)
 	{
 		if (KeyManager::CheckOnHitKey(i))

@@ -174,6 +174,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ChooseList.c" />
     <ClCompile Include="DxKeyTrigger.cpp" />
     <ClCompile Include="DxShell.cpp" />
     <ClCompile Include="main.cpp" />
@@ -181,6 +182,8 @@
     <ClCompile Include="ResLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ChooseList.h" />
+    <ClInclude Include="ChooseListRes.h" />
     <ClInclude Include="DxKeyTrigger.h" />
     <ClInclude Include="DxShell.h" />
     <ClInclude Include="MIDIScreen.h" />
@@ -192,6 +195,7 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="ChooseList.rc" />
     <ResourceCompile Include="Strings.rc" />
     <ResourceCompile Include="VisualMIDIPlayer.rc" />
   </ItemGroup>

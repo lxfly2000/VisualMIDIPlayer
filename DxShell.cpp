@@ -192,7 +192,7 @@ const TCHAR *ParseFileNameFromPath(const TCHAR *path, TCHAR *filename)
 	return NULL;
 }
 //cx,cy有虚值DXGUI_POSITION_CENTER表示屏幕中心
-int DxChooseFilePath(const TCHAR *initPath, TCHAR *choosedPath, const TCHAR *msg, int chooseDir, int keyOk, int keyCancel, int strcolor,
+int DxChooseFilePath(const TCHAR *initPath, TCHAR *choosedPath, const TCHAR *msg, int chooseDir, int list_show_items, int keyOk, int keyCancel, int strcolor,
 	int bgcolor, int bordercolor, float borderwidth, const TCHAR *fontname, int fontsize, int fontthick, int cx, int cy, int paddingWidth,
 	int paddingHeight)
 {
@@ -207,14 +207,13 @@ int DxChooseFilePath(const TCHAR *initPath, TCHAR *choosedPath, const TCHAR *msg
 	if (cx == DXGUI_POSITION_CENTER)cx = ww / 2;
 	if (cy == DXGUI_POSITION_CENTER)cy = wh / 2;
 	
-	const int list_show_items = 5;
 	int strw, strh, lc, singlelineh;
 	GetDrawStringSizeToHandle(&strw, &singlelineh, &lc, TEXT("高"), 1, hDxFont);//获取一行字的高度，也可以用singlelineh = strh / lc获取
 	GetDrawStringSizeToHandle(&strw, &strh, &lc, msg, (int)strlenDx(msg), hDxFont);
 	strw = max(strw, HdpiNum(DXGUI_DRAWSTRING_MIN_WIDTH));
 	if (paddingWidth == -1)paddingWidth = (ww - strw) / 2;
 	int listy = strh;
-	strh += (list_show_items + 1) * singlelineh;
+	strh += (list_show_items + 1) * singlelineh;//+1是因为下面还有一行显示目录的
 	if (paddingHeight == -1)paddingHeight = (wh - strh) / 2;
 	cx = cx - strw / 2 - paddingWidth;
 	cy = cy - strh / 2 - paddingHeight;
@@ -469,4 +468,164 @@ int DxGetInputString(const TCHAR *msg, TCHAR *outString, int limit, BOOL multili
 		len = -1;
 	while (CheckHitKey(KEY_INPUT_ESCAPE) || CheckHitKey(KEY_INPUT_RETURN));
 	return len;
+}
+//cx,cy有虚值DXGUI_POSITION_CENTER表示屏幕中心
+int DxChooseListItem(const TCHAR* msg, const TCHAR*list[], int count, int defaultChoose, int list_show_items, int keyOk,
+	int keyCancel, int strColor, int bgColor, int borderColor, float borderWidth, const TCHAR* fontName, int fontSize, int fontThick,
+	int cx, int cy, int paddingWidth, int paddingHeight)
+{
+	TCHAR msg_def[70];
+	strcpyDx(msg_def, LoadLocalString(IDS_DXGUI_CHOOSELIST_MSG_DEFAULT));
+	if (msg == nullptr)
+		msg = msg_def;
+	int hDxFont = DxShellCreateFontToHandle(fontName, fontSize, fontThick);
+	if (hDxFont == -1)
+		return -1;
+	int ww, wh;
+	GetDrawScreenSize(&ww, &wh);
+	if (cx == DXGUI_POSITION_CENTER)
+		cx = ww / 2;
+	if (cy == DXGUI_POSITION_CENTER)
+		cy = wh / 2;
+
+	int strW, strH, lc, singleLineH;
+	GetDrawStringSizeToHandle(&strW, &singleLineH, &lc, TEXT("高"), 1, hDxFont);
+	GetDrawStringSizeToHandle(&strW, &strH, &lc, msg, (int)strlenDx(msg), hDxFont);
+	strW = max(strW, HdpiNum(DXGUI_DRAWSTRING_MIN_WIDTH));
+	if (paddingWidth == -1)
+		paddingWidth = (ww - strW) / 2;
+	int listY = strH;
+	strH += list_show_items * singleLineH;
+	if (paddingHeight == -1)
+		paddingHeight = (wh - strH) / 2;
+	cx = cx - strW / 2 - paddingWidth;
+	cy = cy - strH / 2 - paddingHeight;
+	int listX = cx + paddingWidth;
+	listY += cy + paddingHeight;
+
+	int keyPressed;
+	std::deque<int> keyQueue;
+	int ret = -1;
+	const int& ci = count;//列表项目总数
+	int listPageCur=max(0,ci-list_show_items);//页面显示的第一项在整个列表中是第几项
+	int cur=ci-listPageCur-1;//页面显示的当前选择的索引（0～list_show_items-1）
+	while (listPageCur + cur > 0)
+	{
+		if (listPageCur + cur == defaultChoose)
+			break;
+		if (cur > 0)
+			cur--;
+		else
+			listPageCur--;
+	}
+	TCHAR shortenedItem[256] = TEXT("");
+tagCursorMove:
+	DrawBox(cx, cy, cx + strW + 2 * paddingWidth, cy + strH + 2 * paddingHeight, bgColor, TRUE);//画纯色背景
+	if (borderWidth > 0.0f)
+		DrawBoxAA((float)cx, (float)cy, cx + strW + 2.0f * paddingWidth, cy + strH + 2.0f * paddingHeight, borderColor, FALSE, borderWidth);//画边框
+	DrawStringToHandle(listX, cy + paddingHeight, msg, strColor, hDxFont);//绘制提示文字
+
+	for (int i = 0; i < list_show_items; i++)
+	{
+		if (listPageCur + i >= ci)
+			break;
+		if (i == cur)
+			DrawBox(listX, listY + singleLineH * i, listX + strW, listY + singleLineH * (i + 1), strColor, TRUE);
+		const TCHAR *posSlashT = strchrDx(list[listPageCur + i], '\t');
+		if (posSlashT)
+		{
+			int color = (i == cur) ? bgColor : strColor;
+			TCHAR szBufLeftPart[256], szBufRightPart[256], tmpShortened[256];
+			strncpyDx(szBufRightPart, posSlashT + 1, ARRAYSIZE(szBufRightPart));
+			szBufRightPart[ARRAYSIZE(szBufRightPart) - 1] = 0;
+			int nCount = min(posSlashT - list[listPageCur + i], ARRAYSIZE(szBufLeftPart));
+			strncpyDx(szBufLeftPart, list[listPageCur + i], nCount);
+			szBufLeftPart[nCount] = 0;
+			DrawStringToHandle(listX, listY + singleLineH * i, ShortenPath(szBufLeftPart, FALSE, tmpShortened, hDxFont, strW), color, hDxFont);
+			int rightPartW, rightPartH, rightPartLineCount;
+			GetDrawStringSizeToHandle(&rightPartW, &rightPartH, &rightPartLineCount, szBufRightPart, strlenDx(szBufRightPart), hDxFont);
+			DrawStringToHandle(listX + strW - rightPartW, listY + singleLineH * i, ShortenPath(szBufRightPart, FALSE, tmpShortened, hDxFont, strW), color, hDxFont);
+		}
+		else
+		{
+			DrawStringToHandle(listX, listY + singleLineH * i, ShortenPath(list[listPageCur + i], FALSE, shortenedItem, hDxFont, strW),
+				(i == cur) ? bgColor : strColor, hDxFont);
+		}
+	}
+
+	ScreenFlip();
+	if (keyQueue.empty())
+		keyQueue.push_back(WaitKey());
+	keyPressed = keyQueue.front();
+	keyQueue.pop_front();
+	if (keyPressed == keyOk)
+	{
+		ret = listPageCur + cur;
+	}
+	else if (keyPressed == keyCancel)
+		ret = -1;
+	else switch (keyPressed)
+	{
+	case KEY_INPUT_UP:case KEY_INPUT_LEFT:
+		if (cur == 0)
+		{
+			if (listPageCur == 0)
+			{
+				cur = min(list_show_items - 1, ci - 1);
+				listPageCur = max(0, ci - list_show_items);
+			}
+			else
+			{
+				listPageCur--;
+			}
+		}
+		else
+		{
+			cur--;
+		}
+		goto tagCursorMove;
+	case KEY_INPUT_DOWN:case KEY_INPUT_RIGHT:
+		if (cur == list_show_items - 1)
+		{
+			if (listPageCur == ci - list_show_items)
+			{
+				cur = 0;
+				listPageCur = 0;
+			}
+			else
+			{
+				listPageCur++;
+			}
+		}
+		else if (cur == ci - 1)
+		{
+			cur = 0;
+		}
+		else
+		{
+			cur++;
+		}
+		goto tagCursorMove;
+	case KEY_INPUT_PGUP:
+		for (int i = 0; i < list_show_items; i++)
+			keyQueue.push_back(KEY_INPUT_UP);
+		goto tagCursorMove;
+	case KEY_INPUT_PGDN:
+		for (int i = 0; i < list_show_items; i++)
+			keyQueue.push_back(KEY_INPUT_DOWN);
+		goto tagCursorMove;
+	case KEY_INPUT_HOME:
+		for (int i = listPageCur + cur; i > 0; i--)
+			keyQueue.push_back(KEY_INPUT_UP);
+		goto tagCursorMove;
+	case KEY_INPUT_END:
+		for (int i = ci - 1 - listPageCur - cur; i > 0; i--)
+			keyQueue.push_back(KEY_INPUT_DOWN);
+		goto tagCursorMove;
+	default:
+		goto tagCursorMove;
+	}
+	DeleteFontToHandle(hDxFont);
+	while (CheckHitKey(keyPressed));
+	return ret;
 }

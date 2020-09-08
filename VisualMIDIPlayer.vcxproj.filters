@@ -30,6 +30,9 @@
     <ClCompile Include="ResLoader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ChooseList.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MIDIScreen.h">
@@ -50,6 +53,12 @@
     <ClInclude Include="resource1.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ChooseList.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ChooseListRes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -59,6 +68,9 @@
       <Filter>资源文件</Filter>
     </ResourceCompile>
     <ResourceCompile Include="Strings.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="ChooseList.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>

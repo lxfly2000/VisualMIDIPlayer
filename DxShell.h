@@ -28,6 +28,7 @@ int DxMessageBox(const TCHAR *msg, int keyOk = KEY_INPUT_RETURN, int keyCancel =
 //initPath：初始路径
 //choosedPath：选择的路径
 //chooseDir：0为选择文件，1为选择目录，2为文件或目录均可
+//list_show_items：每页显示列表项数
 //strcolor：文字颜色
 //bgcolor：背景颜色
 //cx，cy：消息框中心位置，-1为屏幕中心
@@ -35,7 +36,7 @@ int DxMessageBox(const TCHAR *msg, int keyOk = KEY_INPUT_RETURN, int keyCancel =
 //paddingWidth，paddingHeight：文字与边缘的距离（像素），-1为扩展至屏幕边缘
 //返回值：按下keyOk键返回TRUE，keyCancel返回FALSE
 int DxChooseFilePath(const TCHAR *initPath, TCHAR *choosedPath, const TCHAR *msg = NULL,
-	int chooseDir = 0, int keyOk = KEY_INPUT_RETURN, int keyCancel = KEY_INPUT_ESCAPE, int strcolor = DXGUI_COLOR_STRING_DEFAULT,
+	int chooseDir = 0, int list_show_items = 5, int keyOk = KEY_INPUT_RETURN, int keyCancel = KEY_INPUT_ESCAPE, int strcolor = DXGUI_COLOR_STRING_DEFAULT,
 	int bgcolor = DXGUI_COLOR_BACKGROUND_DEFAULT, int bordercolor = DXGUI_COLOR_BORDER_DEFAULT, float borderwidth = DXGUI_BORDER_WIDTH_DEFAULT,
 	const TCHAR *fontname = TEXT(DXGUI_FONTNAME_DEFAULT),
 	int fontsize = DXGUI_FONTSIZE_DEFAULT, int fontthick = DXGUI_FONTTHICK_DEFAULT, int cx = DXGUI_POSITION_CENTER,
@@ -54,6 +55,23 @@ int DxGetInputString(const TCHAR *msg, TCHAR *outString, int limit, BOOL multili
 	const TCHAR *fontname = TEXT(DXGUI_FONTNAME_DEFAULT),
 	int fontsize = DXGUI_FONTSIZE_DEFAULT, int fontthick = DXGUI_FONTTHICK_DEFAULT, int cx = DXGUI_POSITION_CENTER,
 	int cy = DXGUI_POSITION_CENTER, int paddingWidth = DXGUI_PADDING_WIDTH_DEFAULT, int paddingHeight = DXGUI_PADDING_WIDTH_DEFAULT);
+//获取列表选择项（只选择一项），文件或目录均可，按下Enter时返回索引，按下Esc时返回-1
+//方向键选择
+//list：列表项（文字，可以用\t分割左右对齐）
+//count：列表项总数
+//defaultChoose：默认选择项
+//list_show_items：每页显示列表项数量
+//strcolor：文字颜色
+//bgcolor：背景颜色
+//cx，cy：消息框中心位置，-1为屏幕中心
+//fontsize：字体大小
+//paddingWidth，paddingHeight：文字与边缘的距离（像素），-1为扩展至屏幕边缘
+//返回值：按下keyOk键返回选择的索引值，keyCancel返回-1
+int DxChooseListItem(const TCHAR* msg, const TCHAR*list[], int count, int defaultChoose = 0, int list_show_items = 5, int keyOk = KEY_INPUT_RETURN,
+	int keyCancel = KEY_INPUT_ESCAPE, int strColor = DXGUI_COLOR_STRING_DEFAULT, int bgColor = DXGUI_COLOR_BACKGROUND_DEFAULT, int borderColor = DXGUI_COLOR_BORDER_DEFAULT,
+	float borderWidth = DXGUI_BORDER_WIDTH_DEFAULT, const TCHAR* fontName = TEXT(DXGUI_FONTNAME_DEFAULT), int fontSize = DXGUI_FONTSIZE_DEFAULT,
+	int fontThick = DXGUI_FONTTHICK_DEFAULT, int cx = DXGUI_POSITION_CENTER, int cy = DXGUI_POSITION_CENTER, int paddingWidth = DXGUI_PADDING_WIDTH_DEFAULT,
+	int paddingHeight = DXGUI_PADDING_WIDTH_DEFAULT);
 //缩短路径以使字符串的绘制宽度小于maxWidth
 //返回值为shortend
 TCHAR *ShortenPath(const TCHAR *src, BOOL isDir, TCHAR *shortened, int fontHandle, int maxWidth);
