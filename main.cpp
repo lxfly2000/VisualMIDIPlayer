@@ -77,6 +77,7 @@ private:
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 	bool isNonDropPlay = false;
 	bool fileLoadOK = false;
+	int midiDeviceID = 0;
 
 	int stepsperbar = 4;
 };
@@ -284,12 +285,14 @@ unsigned VMPlayer::ChooseDevice()
 		for (UINT i = 0; i < nMidiDev; i++)
 			midiList.push_back(midiListVector[i].c_str());
 		if (windowed)
-			cur = (UINT)ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), 0, NULL, NULL);
+			cur = (UINT)ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), midiDeviceID, NULL, NULL);
 		else
-			cur = (UINT)DxChooseListItem(TEXT("选择 MIDI 输出设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size());
+			cur = (UINT)DxChooseListItem(TEXT("选择 MIDI 输出设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size(),midiDeviceID);
 		if (cur == (UINT)-1)
 			cur = (UINT)-2;
 	}
+	if ((int)cur >= 0)
+		midiDeviceID = (int)cur;
 	return cur;
 }
 
