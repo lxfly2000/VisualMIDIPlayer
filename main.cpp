@@ -1,10 +1,13 @@
 #include<DxLib.h>
+#include<regex>
 #include<MidiPlayer.h>
 #include"MIDIScreen.h"
 #include"DxShell.h"
 #include"ResLoader.h"
 #include"resource1.h"
 #include"ChooseList.h"
+
+#pragma comment(lib,"ComCtl32.lib")
 
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
 
@@ -848,7 +851,32 @@ void VMPlayer::OnLoop()
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_F1))
 	{
 		if (windowed)
-			MessageBox(hWindowDx, helpInfo, TEXT("°ïÖú"), MB_ICONINFORMATION);
+		{
+			//MessageBox(hWindowDx, helpInfo, TEXT("°ïÖú"), MB_ICONINFORMATION);
+			TASKDIALOGCONFIG tdc{};
+			tdc.cbSize = sizeof(tdc);
+			tdc.hwndParent = hWindowDx;
+			tdc.hInstance = GetModuleHandle(NULL);
+			tdc.dwFlags = TDF_ENABLE_HYPERLINKS;
+			tdc.dwCommonButtons = TDCBF_OK_BUTTON;
+			tdc.pszWindowTitle = TEXT("°ïÖú");
+			tdc.pszMainIcon = TD_INFORMATION_ICON;
+			std::basic_string<TCHAR>msgWithURL = helpInfo;
+			msgWithURL = std::regex_replace(msgWithURL, std::basic_regex<TCHAR>(TEXT("(https?://[A-Za-z0-9_\\-\\./]+)")), TEXT("<a href=\"$1\">$1</a>"));
+			tdc.pszContent = msgWithURL.c_str();
+#undef LONG_PTR
+			tdc.pfCallback = [](HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
+			{
+				switch (msg)
+				{
+				case TDN_HYPERLINK_CLICKED:
+					ShellExecute(hwnd, TEXT("open"), (LPCWSTR)lParam, NULL, NULL, SW_SHOWNORMAL);
+					break;
+				}
+				return S_OK;
+			};
+			TaskDialogIndirect(&tdc, NULL, NULL, NULL);
+		}
 		else
 			DxMessageBox((std::basic_string<TCHAR>(helpInfo) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
 	}
