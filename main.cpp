@@ -79,8 +79,9 @@ private:
 	int drawHelpLabelX, drawHelpLabelY;
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 	bool isNonDropPlay = false;
-	bool fileLoadOK = false;
+	bool fileLoadOK = true;
 	int midiDeviceID = 0;
+	int displayWinWidth;
 
 	int stepsperbar = 4;
 };
@@ -167,7 +168,7 @@ int VMPlayer::Init(TCHAR* param)
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
 	bool useHighDpi = hdpi.X(14) > 14;
-	SetGraphMode(hdpi.X(w), hdpi.Y(h), 32);
+	SetGraphMode(displayWinWidth = hdpi.X(w), hdpi.Y(h), 32);
 	ChangeFont(TEXT("SimSun"));
 	SetFontSize(hdpi.X(14));
 	if (useHighDpi)
@@ -352,7 +353,6 @@ bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
 	fileLoadOK = true;
 	if (!LoadMIDI(path))fileLoadOK = false;
-	if (!fileLoadOK)strcatDx(path, TEXT("（无效文件）"));
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path);
 	return fileLoadOK;
 }
@@ -713,30 +713,31 @@ void VMPlayer::OnLoop()
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
 {
-	TCHAR path2[80];
-	if (strlenDx(path) > ARRAYSIZE(path2))
+	TCHAR displayPath[MAX_PATH];
+	const TCHAR* _strPlayStat = isplaying ? LoadLocalString(IDS_STATUS_PLAYING) : LoadLocalString(IDS_STATUS_IDLE);
+	TCHAR strPlayStat[10];
+	strcpyDx(strPlayStat, _strPlayStat);
+	int mw = displayWinWidth - GetDrawStringWidth(strPlayStat, (int)strlenDx(strPlayStat));
+	TCHAR szAppend[20];
+	if (!fileLoadOK)
+		mw -= GetDrawStringWidth(LoadLocalString(IDS_INVALID_FILE), 6);
+	else if (posLoopEnd)
 	{
-		path = strrchrDx(path, TEXT('\\')) + 1;
-		size_t n = strlenDx(path);
-		if (n > ARRAYSIZE(path2))
-		{
-			strncpyDx(path2, path, ARRAYSIZE(path2));
-			path = strrchrDx(path, TEXT('.'));
-			n = ARRAYSIZE(path2) - 3 - strlenDx(path);
-			sprintfDx(path2 + n, TEXT("..%s"), path);
-			path = path2;
-		}
-	}
-	snprintfDx(str, strsize, TEXT("Space:播放/暂停 S:停止 O:打开文件 Esc:退出 L:循环[%s] P:力度[%s] E:发送长消息[%s] ↑/↓:音量[%3d%%]\n%s：%s"),
-		loopOn ? TEXT("开") : TEXT("关"), pressureOn ? TEXT("开") : TEXT("关"), sendlong ? TEXT("开") : TEXT("关"),
-		volume, isplaying ? TEXT("正在播放") : TEXT("当前文件"), path[0] == TEXT('\0') ? TEXT("未选择") : path);
-	if (posLoopEnd)
-	{
-		TCHAR szappend[20];
-		snprintfDx(szappend, ARRAYSIZE(szappend), TEXT("%c%d,%d%c"), loopIncludeStart ? '[' : '(',
+		snprintfDx(szAppend, ARRAYSIZE(szAppend), TEXT("%c%d,%d%c"), loopIncludeStart ? '[' : '(',
 			posLoopStart, posLoopEnd, loopIncludeEnd ? ']' : ')');
-		strcatDx(str, szappend);
+		mw -= GetDrawStringWidth(szAppend, (int)strlenDx(szAppend));
 	}
+	TCHAR strOn[3], strOff[3], strNoLoad[16];
+	strcpyDx(strOn, LoadLocalString(IDS_ON));
+	strcpyDx(strOff, LoadLocalString(IDS_OFF));
+	strcpyDx(strNoLoad, LoadLocalString(IDS_NO_OPEN_FILE));
+	snprintfDx(str, strsize, TEXT("Space:播放/暂停 S:停止 O:打开文件 Esc:退出 L:循环[%s] P:力度[%s] E:发送长消息[%s] ↑/↓:音量[%3d%%]\n%s%s"),
+		loopOn ? strOn : strOff, pressureOn ? strOn : strOff, sendlong ? strOn : strOff,
+		volume, strPlayStat, path[0] ? ShortenPath(path, FALSE, displayPath, GetDefaultFontHandle(), mw) : strNoLoad);
+	if (!fileLoadOK)
+		strcatDx(str, LoadLocalString(IDS_INVALID_FILE));
+	else if (posLoopEnd)
+		strcatDx(str, szAppend);
 }
 
 void VMPlayer::OnSeekBar(int dbars)
