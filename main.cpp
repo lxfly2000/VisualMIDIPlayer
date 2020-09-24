@@ -74,7 +74,7 @@ private:
 	TCHAR filepath[MAX_PATH] = L"";
 	TCHAR szStr[156];
 	TCHAR szTimeInfo[100];
-	TCHAR szLastTick[12] = TEXT("0:00:000");
+	TCHAR szLastTick[12] = TEXT("0:0:000");
 	int showProgram = 0;//0=不显示，1=显示3列音色号，2=显示音色名，3=显示1列音色号和音色名，4=全部显示
 	int drawHelpLabelX, drawHelpLabelY;
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
@@ -93,178 +93,10 @@ const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C
 	"屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n"
 	"制作：lxfly2000\nhttps://github.com/lxfly2000/VisualMIDIPlayer"
 );
-TCHAR programName[][30] = {
-L"Acoustic Grand Piano",
-L"Bright Acoustic Piano",
-L"Electric Grand Piano",
-L"Honky-tonk Piano",
-L"Electric Piano 1",
-L"Electric Piano 2",
-L"Harpsichord",
-L"Clavi",
-L"Celesta",
-L"Glockenspiel",
-L"Music Box",
-L"Vibraphone",
-L"Marimba",
-L"Xylophone",
-L"Tubular Bells",
-L"Dulcimer",
-L"Drawbar Organ",
-L"Percussive Organ",
-L"Rock Organ",
-L"Church Organ",
-L"Reed Organ",
-L"Accordion",
-L"Harmonica",
-L"Tango Accordion",
-L"Acoustic Guitar (nylon)",
-L"Acoustic Guitar (steel)",
-L"Electric Guitar (jazz)",
-L"Electric Guitar (clean)",
-L"Electric Guitar (muted)",
-L"Overdriven Guitar",
-L"Distortion Guitar",
-L"Guitar harmonics",
-L"Acoustic Bass",
-L"Electric Bass (finger)",
-L"Electric Bass (pick)",
-L"Fretless Bass",
-L"Slap Bass 1",
-L"Slap Bass 2",
-L"Synth Bass 1",
-L"Synth Bass 2",
-L"Violin",
-L"Viola",
-L"Cello",
-L"Contrabass",
-L"Tremolo Strings",
-L"Pizzicato Strings",
-L"Orchestral Harp",
-L"Timpani",
-L"String Ensemble 1",
-L"String Ensemble 2",
-L"SynthStrings 1",
-L"SynthStrings 2",
-L"Choir Aahs",
-L"Voice Oohs",
-L"Synth Voice",
-L"Orchestra Hit",
-L"Trumpet",
-L"Trombone",
-L"Tuba",
-L"Muted Trumpet",
-L"French Horn",
-L"Brass Section",
-L"SynthBrass 1",
-L"SynthBrass 2",
-L"Soprano Sax",
-L"Alto Sax",
-L"Tenor Sax",
-L"Baritone Sax",
-L"Oboe",
-L"English Horn",
-L"Bassoon",
-L"Clarinet",
-L"Piccolo",
-L"Flute",
-L"Recorder",
-L"Pan Flute",
-L"Blown Bottle",
-L"Shakuhachi",
-L"Whistle",
-L"Ocarina",
-L"Lead 1 (square)",
-L"Lead 2 (sawtooth)",
-L"Lead 3 (calliope)",
-L"Lead 4 (chiff)",
-L"Lead 5 (charang)",
-L"Lead 6 (voice)",
-L"Lead 7 (fifths)",
-L"Lead 8 (bass + lead)",
-L"Pad 1 (new age)",
-L"Pad 2 (warm)",
-L"Pad 3 (polysynth)",
-L"Pad 4 (choir)",
-L"Pad 5 (bowed)",
-L"Pad 6 (metallic)",
-L"Pad 7 (halo)",
-L"Pad 8 (sweep)",
-L"FX 1 (rain)",
-L"FX 2 (soundtrack)",
-L"FX 3 (crystal)",
-L"FX 4 (atmosphere)",
-L"FX 5 (brightness)",
-L"FX 6 (goblins)",
-L"FX 7 (echoes)",
-L"FX 8 (sci-fi)",
-L"Sitar",
-L"Banjo",
-L"Shamisen",
-L"Koto",
-L"Kalimba",
-L"Bag pipe",
-L"Fiddle",
-L"Shanai",
-L"Tinkle Bell",
-L"Agogo",
-L"Steel Drums",
-L"Woodblock",
-L"Taiko Drum",
-L"Melodic Tom",
-L"Synth Drum",
-L"Reverse Cymbal",
-L"Guitar Fret Noise",
-L"Breath Noise",
-L"Seashore",
-L"Bird Tweet",
-L"Telephone Ring",
-L"Helicopter",
-L"Applause",
-L"Gunshot"
-};
-TCHAR drumName[][30] = {
-L"0 Standard",
-L"1 Standard 2",
-L"2 Standard L/R",
-L"8 Room",
-L"9 Hip Hop",
-L"10 Jungle",
-L"11 Techno",
-L"12 Room L/R",
-L"13 House",
-L"16 Power",
-L"24 Electronic",
-L"25 TR-808",
-L"26 Dance",
-L"27 CR-78",
-L"28 TR-606",
-L"29 TR-707",
-L"30 TR-909",
-L"32 Jazz",
-L"33 Jazz L/R",
-L"40 Brush",
-L"41 Brush 2",
-L"42 Brush 2 L/R",
-L"48 Orchestra",
-L"49 Ethnic",
-L"50 Kick & Snare",
-L"51 Kick & Snare 2",
-L"52 Asia",
-L"53 Cymbal & Claps",
-L"54 Gamelan",
-L"55 Gamelan 2",
-L"56 SFX",
-L"57 Rhythm FX",
-L"58 Rhythm FX 2",
-L"59 Rhythm FX 3",
-L"60 SFX 2",
-L"61 Voice",
-L"62 Cymbal & Claps 2",
-L"127 CM-64/32"
-};
+#include"Instruments.h"
 #include<vector>
 #include<string>
+std::vector<std::wstring>mapProgramName;
 std::vector<std::wstring>mapDrumName;
 
 VMPlayer* VMPlayer::_pObj = nullptr;
@@ -364,21 +196,16 @@ int VMPlayer::Init(TCHAR* param)
 	{
 		TCHAR tmp[30];
 		wsprintf(tmp, TEXT("%3d %s"), i, programName[i]);
-		lstrcpy(programName[i], tmp);
+		mapProgramName.push_back(tmp);
 	}
 	for (int i = 0; i < ARRAYSIZE(drumName); i++)
 	{
-		TCHAR buf[24],buf2[30];
-		unsigned n;
-		sscanfDx(drumName[i], TEXT("%d %[^\n]"), &n, buf);
-		wsprintf(buf2, TEXT("%3d %s"), n, buf);
-		while (mapDrumName.size() < n)
-		{
-			TCHAR buf3[4];
-			wsprintf(buf3, TEXT("%3d"), (int)mapDrumName.size());
-			mapDrumName.push_back(buf3);
-		}
-		mapDrumName.push_back(buf2);
+		TCHAR tmp[30];
+		if (lstrlen(drumName[i]) == 0)
+			wsprintf(tmp, TEXT("%3d"), i);
+		else
+			wsprintf(tmp, TEXT("%3d %s"), i, drumName[i]);
+		mapDrumName.push_back(tmp);
 	}
 
 	//http://nut-softwaredevelopper.hatenablog.com/entry/2016/02/25/001647
@@ -673,7 +500,7 @@ void VMPlayer::OnDraw()
 			if (i == 9)
 				p = mapDrumName[ms.chPrograms[i]].c_str();
 			else
-				p = programName[ms.chPrograms[i]];
+				p = mapProgramName[ms.chPrograms[i]].c_str();
 			TCHAR pMode1[50];
 			switch (showProgram)
 			{

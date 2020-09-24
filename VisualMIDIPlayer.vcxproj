@@ -181,6 +181,7 @@
     <ClCompile Include="ChooseList.c" />
     <ClCompile Include="DxKeyTrigger.cpp" />
     <ClCompile Include="DxShell.cpp" />
+    <ClCompile Include="Instruments.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MIDIScreen.cpp" />
     <ClCompile Include="ResLoader.cpp" />
@@ -190,6 +191,7 @@
     <ClInclude Include="ChooseListRes.h" />
     <ClInclude Include="DxKeyTrigger.h" />
     <ClInclude Include="DxShell.h" />
+    <ClInclude Include="Instruments.h" />
     <ClInclude Include="MIDIScreen.h" />
     <ClInclude Include="ResLoader.h" />
     <ClInclude Include="resource.h" />
