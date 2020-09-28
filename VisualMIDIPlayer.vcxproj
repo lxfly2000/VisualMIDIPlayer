@@ -209,6 +209,9 @@
     <ProjectReference Include="libMidiPlayer\MIDIPlayer.vcxproj">
       <Project>{01e92b7c-8942-4c44-98a7-9f9ca97e683b}</Project>
     </ProjectReference>
+    <ProjectReference Include="MidiController\MidiController.vcxproj">
+      <Project>{94085176-2833-4ba4-9614-874a256d1fd6}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

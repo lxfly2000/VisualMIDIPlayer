@@ -6,6 +6,7 @@
 #include"ResLoader.h"
 #include"resource1.h"
 #include"ChooseList.h"
+#include"MidiController/MidiController.h"
 
 #pragma comment(lib,"ComCtl32.lib")
 
@@ -34,7 +35,11 @@ public:
 	void Run();
 	int End();
 	int InitMIDIPlayer(UINT deviceId);
+	int InitMIDIInput(UINT deviceId);
 	int EndMIDIPlayer();
+	int EndMIDIInput();
+	MidiController* pmc = nullptr;
+	MidiPlayer* pmp = nullptr;
 protected:
 	void _OnFinishPlayCallback();
 	void _OnProgramChangeCallback(int channel, int program);
@@ -51,6 +56,8 @@ private:
 	HWND hWindowDx;
 	//当返回-2时为取消操作，其他为选择的设备ID
 	unsigned ChooseDevice();
+	//当返回-2时为取消操作，-1为不使用，其他为选择的设备ID
+	unsigned ChooseInputDevice();
 	void OnDraw();
 	void OnLoop();
 	bool LoadMIDI(const TCHAR* path);
@@ -58,8 +65,8 @@ private:
 	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path);
 	void UpdateTextLastTick();
 	void ReChooseMIDIDevice();
+	void ReChooseMIDIInDevice();
 	MIDIScreen ms;
-	MidiPlayer* pmp = nullptr;
 	bool running = true;
 	bool sendlong;
 	bool loopOn = true;
@@ -80,7 +87,7 @@ private:
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 	bool isNonDropPlay = false;
 	bool fileLoadOK = true;
-	int midiDeviceID = 0;
+	int midiDeviceID = 0,midiInDeviceID=-1;
 	int displayWinWidth;
 
 	int stepsperbar = 4;
@@ -88,7 +95,7 @@ private:
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
 const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n"
-	"R: 显示音色\nD: 重新选择MIDI设备\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
+	"R: 显示音色\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
 	"Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n"
 	"屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n"
 	"屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n"
@@ -105,30 +112,69 @@ WNDPROC VMPlayer::dxProcess = nullptr;
 
 unsigned VMPlayer::ChooseDevice()
 {
-	unsigned nMidiDev = midiOutGetNumDevs(), cur = 0;
+	unsigned nMidiDev = midiOutGetNumDevs();
+	int cur = 0;
 	TCHAR str[120];
 	MIDIOUTCAPS caps;
 	if (nMidiDev > 1)
 	{
 		std::vector<const TCHAR*>midiList;
 		std::vector<std::basic_string<TCHAR>> midiListVector;
+		for (int i = -1; i < (int)nMidiDev; i++)
+		{
+			midiOutGetDevCaps((UINT_PTR)i, &caps, sizeof(caps));
+			if (i == -1)
+				sprintfDx(str, TEXT("[-] %s"), caps.szPname);
+			else
+				sprintfDx(str, TEXT("[%d] %s"), i, caps.szPname);
+			midiListVector.push_back(str);
+		}
+		for (UINT i = 0; i < nMidiDev+1; i++)
+			midiList.push_back(midiListVector[i].c_str());
+		if (windowed)
+			cur = ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), midiDeviceID+1, NULL, NULL);
+		else
+			cur = DxChooseListItem(TEXT("选择 MIDI 输出设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size(),midiDeviceID+1);
+		if (cur == -1)
+			cur = -2;
+		else
+			cur--;
+	}
+	if (cur >= -1)
+		midiDeviceID = cur;
+	return cur;
+}
+
+unsigned VMPlayer::ChooseInputDevice()
+{
+	unsigned nMidiDev = midiInGetNumDevs();
+	int cur = 0;
+	TCHAR str[120];
+	MIDIINCAPS caps;
+	if (nMidiDev > 0)
+	{
+		std::vector<const TCHAR*>midiList;
+		std::vector<std::basic_string<TCHAR>> midiListVector;
 		for (UINT i = 0; i < nMidiDev; i++)
 		{
-			midiOutGetDevCaps(i, &caps, sizeof(caps));
+			midiInGetDevCaps(i, &caps, sizeof(caps));
 			sprintfDx(str, TEXT("[%d] %s"), i, caps.szPname);
 			midiListVector.push_back(str);
 		}
 		for (UINT i = 0; i < nMidiDev; i++)
 			midiList.push_back(midiListVector[i].c_str());
+		midiList.insert(midiList.begin(), TEXT("[-] 不使用"));
 		if (windowed)
-			cur = (UINT)ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), midiDeviceID, NULL, NULL);
+			cur = ChooseList(hWindowDx, TEXT("选择 MIDI 输入设备"), midiList.data(), (int)midiList.size(), midiInDeviceID+1, NULL, NULL);
 		else
-			cur = (UINT)DxChooseListItem(TEXT("选择 MIDI 输出设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size(),midiDeviceID);
-		if (cur == (UINT)-1)
-			cur = (UINT)-2;
+			cur = DxChooseListItem(TEXT("选择 MIDI 输入设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size(), midiInDeviceID+1);
+		if (cur == -1)
+			cur = -2;
+		else
+			cur--;
 	}
-	if ((int)cur >= 0)
-		midiDeviceID = (int)cur;
+	if (cur >= -1)
+		midiInDeviceID = cur;
 	return cur;
 }
 
@@ -247,9 +293,21 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId)
 	return 0;
 }
 
+int VMPlayer::InitMIDIInput(UINT deviceId)
+{
+	pmc = MidiController::CreateMidiController(deviceId, true);
+	pmc->SetOnClose([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->EndMIDIInput(); });
+	pmc->SetOnData([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->pmp->_ProcessMidiShortEvent(midiMessage, false); });
+	pmc->SetOnMoreData([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->pmp->_ProcessMidiShortEvent(midiMessage, false); });
+	if (pmp)
+		midiConnect((HMIDI)pmc->GetHandle(), pmp->GetHandle(), NULL);
+	return 0;
+}
+
 int VMPlayer::End()
 {
 	//DxLib_End();//Win7系统会莫名崩溃
+	EndMIDIInput();
 	return EndMIDIPlayer();
 }
 
@@ -261,6 +319,18 @@ int VMPlayer::EndMIDIPlayer()
 		pmp->Unload();
 		delete pmp;
 		pmp = nullptr;
+	}
+	return 0;
+}
+
+int VMPlayer::EndMIDIInput()
+{
+	if (pmc)
+	{
+		if (pmp)
+			midiDisconnect((HMIDI)pmc->GetHandle(), pmp->GetHandle(), NULL);
+		if (MidiController::ReleaseMidiController(pmc) == MMSYSERR_NOERROR)
+			pmc = nullptr;
 	}
 	return 0;
 }
@@ -449,13 +519,33 @@ void VMPlayer::ReChooseMIDIDevice()
 		return;
 	}
 	UINT id = ChooseDevice();
-	if ((int)id >= 0)
+	if ((int)id >= -1)
 	{
 		EndMIDIPlayer();
 		InitMIDIPlayer(id);
 		if (filepath[0])
 			OnLoadMIDI(filepath);
 	}
+}
+
+void VMPlayer::ReChooseMIDIInDevice()
+{
+	if (midiInGetNumDevs() == 0)
+	{
+		if (windowed)
+			MessageBox(hWindowDx, TEXT("没有MIDI输入设备可以选择。"), NULL, MB_ICONEXCLAMATION);
+		else
+			DxMessageBox((std::basic_string<TCHAR>(TEXT("没有MIDI输入设备可以选择。")) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
+		return;
+	}
+	UINT id = ChooseInputDevice();
+	if ((int)id >= 0)
+	{
+		EndMIDIInput();
+		InitMIDIInput(id);
+	}
+	else if ((int)id == -1)
+		EndMIDIInput();
 }
 
 void VMPlayer::DrawTime()
@@ -665,6 +755,8 @@ void VMPlayer::OnLoop()
 		pmp->SetPlaybackSpeed(pmp->GetPlaybackSpeed() / 2.0f);
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_D))
 		ReChooseMIDIDevice();
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_N))
+		ReChooseMIDIInDevice();
 	for (int i = KEY_INPUT_1; i <= KEY_INPUT_0; i++)
 	{
 		if (KeyManager::CheckOnHitKey(i))
