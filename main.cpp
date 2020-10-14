@@ -433,6 +433,7 @@ bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
 	fileLoadOK = true;
 	if (!LoadMIDI(path))fileLoadOK = false;
+	szLyric[0] = 0;
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path);
 	return fileLoadOK;
 }
