@@ -64,7 +64,7 @@ private:
 	void OnLoop();
 	bool LoadMIDI(const TCHAR* path);
 	void DrawTime();
-	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path);
+	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path, bool clearLyrics = false);
 	void UpdateTextLastTick();
 	void ReChooseMIDIDevice();
 	void ReChooseMIDIInDevice();
@@ -91,7 +91,7 @@ private:
 	bool fileLoadOK = true;
 	int midiDeviceID = 0,midiInDeviceID=-1;
 	int displayWinWidth;
-	TCHAR szLyric[128] = TEXT("");
+	TCHAR szLyric[128];
 
 	int stepsperbar = 4;
 };
@@ -293,7 +293,7 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId)
 	pmp->SetOnLyricText([](const MIDIMetaStructure& meta) {VMPlayer::_pObj->_OnLyricText(meta); });
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
-	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath, true);
 	return 0;
 }
 
@@ -351,7 +351,7 @@ void VMPlayer::Run()
 
 void VMPlayer::_OnFinishPlayCallback()
 {
-	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath, true);
 }
 
 void VMPlayer::_OnProgramChangeCallback(int channel, int program)
@@ -433,8 +433,7 @@ bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
 	fileLoadOK = true;
 	if (!LoadMIDI(path))fileLoadOK = false;
-	szLyric[0] = 0;
-	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, path, true);
 	return fileLoadOK;
 }
 
@@ -442,15 +441,13 @@ void VMPlayer::OnCommandPlay()
 {
 	isNonDropPlay = CheckHitKey(KEY_INPUT_LSHIFT) || CheckHitKey(KEY_INPUT_RSHIFT);
 	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true, !isNonDropPlay);
-	szLyric[0] = 0;
-	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath, true);
 }
 
 void VMPlayer::OnCommandStop()
 {
 	pmp->Stop(false);
-	szLyric[0] = 0;
-	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath, true);
 }
 
 void VMPlayer::OnDrop(HDROP hdrop)
@@ -819,7 +816,7 @@ void VMPlayer::OnLoop()
 		showProgram = (showProgram + 1) % 5;
 }
 
-void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path)
+void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path, bool clearLyrics)
 {
 	TCHAR displayPath[MAX_PATH];
 	const TCHAR* _strPlayStat = isplaying ? LoadLocalString(IDS_STATUS_PLAYING) : LoadLocalString(IDS_STATUS_IDLE);
@@ -835,6 +832,8 @@ void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR
 			posLoopStart, posLoopEnd, loopIncludeEnd ? ']' : ')');
 		mw -= GetDrawStringWidth(szAppend, (int)strlenDx(szAppend));
 	}
+	if (clearLyrics)
+		szLyric[0] = 0;
 	TCHAR strOn[3], strOff[3], strNoLoad[16];
 	strcpyDx(strOn, LoadLocalString(IDS_ON));
 	strcpyDx(strOff, LoadLocalString(IDS_OFF));
@@ -852,6 +851,7 @@ void VMPlayer::OnSeekBar(int dbars)
 {
 	pmp->SetPos(pmp->GetPosTick() + dbars*pmp->GetStepsPerBar()*pmp->GetQuarterNoteTicks());
 	pmp->Panic(true);
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath, true);
 }
 
 #ifdef _UNICODE
