@@ -45,8 +45,10 @@ protected:
 	void _OnProgramChangeCallback(int channel, int program);
 	void _OnControlChangeCallback(int channel, int cc, int val);
 	void _OnSysExCallback(PBYTE data,size_t length);
+	void _OnLyricText(const MIDIMetaStructure& meta);
 	bool OnLoadMIDI(TCHAR*);
 	void OnCommandPlay();
+	void OnCommandStop();
 	void OnDrop(HDROP);
 	void OnSeekBar(int);
 	static VMPlayer* _pObj;
@@ -89,6 +91,7 @@ private:
 	bool fileLoadOK = true;
 	int midiDeviceID = 0,midiInDeviceID=-1;
 	int displayWinWidth;
+	TCHAR szLyric[128] = TEXT("");
 
 	int stepsperbar = 4;
 };
@@ -287,6 +290,7 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId)
 	pmp->SetOnProgramChange([](BYTE ch, BYTE prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetOnControlChange([](BYTE ch, BYTE cc, BYTE val) {VMPlayer::_pObj->_OnControlChangeCallback(ch, cc, val); });
 	pmp->SetOnSysEx([](PBYTE data, size_t length) {VMPlayer::_pObj->_OnSysExCallback(data, length); });
+	pmp->SetOnLyricText([](const MIDIMetaStructure& meta) {VMPlayer::_pObj->_OnLyricText(meta); });
 	pmp->SetSendLongMsg(sendlong = true);
 	ms.SetPlayerSrc(pmp);
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
@@ -419,6 +423,12 @@ void VMPlayer::_OnSysExCallback(PBYTE data, size_t length)
 	}
 }
 
+void VMPlayer::_OnLyricText(const MIDIMetaStructure& meta)
+{
+	szLyric[MultiByteToWideChar(CP_ACP, NULL, (char*)meta.pData, meta.dataLength, szLyric, ARRAYSIZE(szLyric) - 1)] = 0;
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+}
+
 bool VMPlayer::OnLoadMIDI(TCHAR* path)
 {
 	fileLoadOK = true;
@@ -431,6 +441,14 @@ void VMPlayer::OnCommandPlay()
 {
 	isNonDropPlay = CheckHitKey(KEY_INPUT_LSHIFT) || CheckHitKey(KEY_INPUT_RSHIFT);
 	pmp->GetPlayStatus() ? pmp->Pause() : pmp->Play(true, !isNonDropPlay);
+	szLyric[0] = 0;
+	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
+}
+
+void VMPlayer::OnCommandStop()
+{
+	pmp->Stop(false);
+	szLyric[0] = 0;
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
 }
 
@@ -668,10 +686,7 @@ void VMPlayer::OnLoop()
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_SPACE))
 		OnCommandPlay();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_S))
-	{
-		pmp->Stop(false);
-		UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath);
-	}
+		OnCommandStop();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_O))
 	{
 		if (windowed ? SelectFile(filepath, NULL) : DxChooseFilePath(filepath, filepath))
@@ -825,7 +840,7 @@ void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR
 	strcpyDx(strNoLoad, LoadLocalString(IDS_NO_OPEN_FILE));
 	snprintfDx(str, strsize, TEXT("Space:播放/暂停 S:停止 O:打开文件 Esc:退出 L:循环[%s] P:力度[%s] E:发送长消息[%s] ↑/↓:音量[%3d%%]\n%s%s"),
 		loopOn ? strOn : strOff, pressureOn ? strOn : strOff, sendlong ? strOn : strOff,
-		volume, strPlayStat, path[0] ? ShortenPath(path, FALSE, displayPath, GetDefaultFontHandle(), mw) : strNoLoad);
+		volume, strPlayStat, szLyric[0] ? szLyric : (path[0] ? ShortenPath(path, FALSE, displayPath, GetDefaultFontHandle(), mw) : strNoLoad));
 	if (!fileLoadOK)
 		strcatDx(str, LoadLocalString(IDS_INVALID_FILE));
 	else if (posLoopEnd)
