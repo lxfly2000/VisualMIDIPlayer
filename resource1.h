@@ -47,6 +47,7 @@
 #define IDS_OK                          143
 #define IDS_CANCEL                      144
 #define IDS_DXGUI_CHOOSELIST_MSG_DEFAULT 145
+#define IDS_DXMSG_APPEND_YESNO          146
 
 // Next default values for new objects
 // 

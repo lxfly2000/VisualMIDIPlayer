@@ -1,16 +1,19 @@
 #include<DxLib.h>
-#include<regex>
 #include<MidiPlayer.h>
 #include"MIDIScreen.h"
+#include"CommonDialogs.h"
 #include"DxShell.h"
 #include"ResLoader.h"
 #include"resource1.h"
-#include"ChooseList.h"
+#include"vstplugin.h"
 #include"MidiController/MidiController.h"
 
 #pragma comment(lib,"ComCtl32.lib")
 
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
+#define CHOOSE_DEVICE_USER_CLICKED_CANCEL (UINT)-4
+#define FILTER_VST "VST插件\0*.dll\0所有文件\0*\0\0"
+#define FILTER_SOUNDFONT "SF2音色库\0*.sf2\0所有文件\0*\0\0"
 
 class DPIInfo
 {
@@ -34,7 +37,7 @@ public:
 	int Init(TCHAR* param);
 	void Run();
 	int End();
-	int InitMIDIPlayer(UINT deviceId);
+	int InitMIDIPlayer(UINT deviceId, LPVOID extraInfo);
 	int InitMIDIInput(UINT deviceId);
 	int EndMIDIPlayer();
 	int EndMIDIInput();
@@ -56,9 +59,9 @@ private:
 	static LRESULT CALLBACK ExtraProcess(HWND, UINT, WPARAM, LPARAM);
 	static WNDPROC dxProcess;
 	HWND hWindowDx;
-	//当返回-2时为取消操作，其他为选择的设备ID
-	unsigned ChooseDevice();
-	//当返回-2时为取消操作，-1为不使用，其他为选择的设备ID
+	//当返回CHOOSE_DEVICE_USER_CLICKED_CANCEL时为取消操作，其他为选择的设备ID
+	unsigned ChooseDevice(LPTSTR path, bool useDefaultIfOnlyOne);
+	//当返回CHOOSE_DEVICE_USER_CLICKED_CANCEL时为取消操作，-1为不使用，其他为选择的设备ID
 	unsigned ChooseInputDevice();
 	void OnDraw();
 	void OnLoop();
@@ -80,16 +83,16 @@ private:
 	unsigned volume = 100u;
 	int posLoopStart, posLoopEnd;
 	bool loopIncludeStart = false, loopIncludeEnd = true;
-	TCHAR filepath[MAX_PATH] = L"";
+	TCHAR filepath[MAX_PATH];
 	TCHAR szStr[156];
 	TCHAR szTimeInfo[100];
-	TCHAR szLastTick[12] = TEXT("0:0:000");
+	TCHAR szLastTick[12];
 	int showProgram = 0;//0=不显示，1=显示3列音色号，2=显示音色名，3=显示1列音色号和音色名，4=全部显示
 	int drawHelpLabelX, drawHelpLabelY;
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 	bool isNonDropPlay = false;
 	bool fileLoadOK = true;
-	int midiDeviceID = 0,midiInDeviceID=-1;
+	UINT midiDeviceID = 0,midiInDeviceID=-1;
 	int displayWinWidth;
 	TCHAR szLyric[128];
 
@@ -97,13 +100,12 @@ private:
 };
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
-const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n"
-	"R: 显示音色\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n"
-	"Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n"
-	"屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n"
-	"屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n"
-	"制作：lxfly2000\nhttps://github.com/lxfly2000/VisualMIDIPlayer"
-);
+const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n")
+	TEXT("R: 显示音色\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nW: 显示/隐藏VST窗口\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n")
+	TEXT("Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n")
+	TEXT("屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n")
+	TEXT("屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n")
+	TEXT("制作：lxfly2000\nhttps://github.com/lxfly2000/VisualMIDIPlayer");
 #include"Instruments.h"
 #include<vector>
 #include<string>
@@ -113,37 +115,44 @@ std::vector<std::wstring>mapDrumName;
 VMPlayer* VMPlayer::_pObj = nullptr;
 WNDPROC VMPlayer::dxProcess = nullptr;
 
-unsigned VMPlayer::ChooseDevice()
+unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 {
 	unsigned nMidiDev = midiOutGetNumDevs();
-	int cur = 0;
-	TCHAR str[120];
+	UINT cur = 0;
 	MIDIOUTCAPS caps;
-	if (nMidiDev > 1)
+	if (nMidiDev > 1||!useDefaultIfOnlyOne)
 	{
 		std::vector<const TCHAR*>midiList;
 		std::vector<std::basic_string<TCHAR>> midiListVector;
 		for (int i = -1; i < (int)nMidiDev; i++)
 		{
 			midiOutGetDevCaps((UINT_PTR)i, &caps, sizeof(caps));
-			if (i == -1)
-				sprintfDx(str, TEXT("[-] %s"), caps.szPname);
-			else
-				sprintfDx(str, TEXT("[%d] %s"), i, caps.szPname);
-			midiListVector.push_back(str);
+			midiListVector.push_back(caps.szPname);
 		}
 		for (UINT i = 0; i < nMidiDev+1; i++)
 			midiList.push_back(midiListVector[i].c_str());
-		if (windowed)
-			cur = ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), midiDeviceID+1, NULL, NULL);
-		else
-			cur = DxChooseListItem(TEXT("选择 MIDI 输出设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size(),midiDeviceID+1);
-		if (cur == -1)
-			cur = -2;
+		midiList.push_back(TEXT("使用VST插件……"));
+		midiList.push_back(TEXT("使用SF2音色库……"));
+		tagChooseDeviceDialog:
+		cur = (UINT)CMDLG_ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), midiDeviceID + 1);
+		if (cur == (UINT)-1)
+			cur = CHOOSE_DEVICE_USER_CLICKED_CANCEL;
+		else if (cur == nMidiDev + 1)
+		{
+			if (CMDLG_ChooseFile(hWindowDx,extraInfoPath, extraInfoPath, TEXT(FILTER_VST)) == FALSE)
+				goto tagChooseDeviceDialog;
+			cur = MIDI_DEVICE_USE_VST_PLUGIN;
+		}
+		else if (cur == nMidiDev + 2)
+		{
+			if (CMDLG_ChooseFile(hWindowDx,extraInfoPath, extraInfoPath, TEXT(FILTER_SOUNDFONT)) == FALSE)
+				goto tagChooseDeviceDialog;
+			cur = MIDI_DEVICE_USE_SOUNDFONT2;
+		}
 		else
 			cur--;
 	}
-	if (cur >= -1)
+	if (cur != CHOOSE_DEVICE_USER_CLICKED_CANCEL)
 		midiDeviceID = cur;
 	return cur;
 }
@@ -151,8 +160,7 @@ unsigned VMPlayer::ChooseDevice()
 unsigned VMPlayer::ChooseInputDevice()
 {
 	unsigned nMidiDev = midiInGetNumDevs();
-	int cur = 0;
-	TCHAR str[120];
+	UINT cur = 0;
 	MIDIINCAPS caps;
 	if (nMidiDev > 0)
 	{
@@ -161,22 +169,18 @@ unsigned VMPlayer::ChooseInputDevice()
 		for (UINT i = 0; i < nMidiDev; i++)
 		{
 			midiInGetDevCaps(i, &caps, sizeof(caps));
-			sprintfDx(str, TEXT("[%d] %s"), i, caps.szPname);
-			midiListVector.push_back(str);
+			midiListVector.push_back(caps.szPname);
 		}
 		for (UINT i = 0; i < nMidiDev; i++)
 			midiList.push_back(midiListVector[i].c_str());
 		midiList.insert(midiList.begin(), TEXT("[-] 不使用"));
-		if (windowed)
-			cur = ChooseList(hWindowDx, TEXT("选择 MIDI 输入设备"), midiList.data(), (int)midiList.size(), midiInDeviceID+1, NULL, NULL);
-		else
-			cur = DxChooseListItem(TEXT("选择 MIDI 输入设备\n[Enter]确认 [Esc]退出 [↑/↓]选择"), midiList.data(), (int)midiList.size(), midiInDeviceID+1);
-		if (cur == -1)
-			cur = -2;
+		cur = (UINT)CMDLG_ChooseList(hWindowDx, TEXT("选择 MIDI 输入设备"), midiList.data(), (int)midiList.size(), midiInDeviceID + 1);
+		if (cur == (UINT)-1)
+			cur = CHOOSE_DEVICE_USER_CLICKED_CANCEL;
 		else
 			cur--;
 	}
-	if (cur >= -1)
+	if (cur != CHOOSE_DEVICE_USER_CLICKED_CANCEL)
 		midiInDeviceID = cur;
 	return cur;
 }
@@ -196,6 +200,8 @@ int VMPlayer::Init(TCHAR* param)
 {
 	_pObj = this;
 	int w = 800, h = 600;
+	strcpyDx(filepath, TEXT(""));
+	strcpyDx(szLastTick, TEXT("0:0:000"));
 	if (strstrDx(param, TEXT("600p")))
 	{
 		w = 960;
@@ -214,6 +220,7 @@ int VMPlayer::Init(TCHAR* param)
 	if (!windowed)
 		param[0] = 0;
 	ChangeWindowMode(windowed);
+	CMDLG_SetUseDxDialogs(!windowed);
 	SetAlwaysRunFlag(TRUE);
 	DPIInfo hdpi;
 	bool useHighDpi = hdpi.X(14) > 14;
@@ -222,7 +229,7 @@ int VMPlayer::Init(TCHAR* param)
 	SetFontSize(hdpi.X(14));
 	if (useHighDpi)
 		ChangeFontType(DX_FONTTYPE_ANTIALIASING);
-	DxShellSetUseHighDpi(useHighDpi);
+	CMDLG_DxShellSetUseHighDpi(useHighDpi);
 	SetFontThickness(3);
 	SetWindowSizeExtendRate(1.0, 1.0);
 	GetDrawScreenSize(&screenWidth, &screenHeight);
@@ -264,10 +271,15 @@ int VMPlayer::Init(TCHAR* param)
 	SetWindowLongPtr(hWindowDx, GWL_EXSTYLE, WS_EX_ACCEPTFILES | GetWindowLongPtr(hWindowDx, GWL_EXSTYLE));
 	SetWindowLongPtr(hWindowDx, GWLP_WNDPROC, (LONG_PTR)ExtraProcess);
 
-	UINT retChoose = strlenDx(param) ? MIDI_MAPPER : ChooseDevice();
-	if (retChoose == (UINT)-2)
-		return -2;
-	InitMIDIPlayer(retChoose);
+	while (true)
+	{
+		TCHAR pluginExtraPath[MAX_PATH] = TEXT("");
+		UINT retChoose = strlenDx(param) ? MIDI_MAPPER : ChooseDevice(pluginExtraPath, true);
+		if (retChoose == CHOOSE_DEVICE_USER_CLICKED_CANCEL)
+			return CHOOSE_DEVICE_USER_CLICKED_CANCEL;
+		if (InitMIDIPlayer(retChoose, pluginExtraPath) == 0)
+			break;
+	}
 
 	if (strlenDx(param))
 	{
@@ -283,9 +295,36 @@ int VMPlayer::Init(TCHAR* param)
 	return 0;
 }
 
-int VMPlayer::InitMIDIPlayer(UINT deviceId)
+int VMPlayer::InitMIDIPlayer(UINT deviceId, LPVOID extraInfo)
 {
-	pmp = new MidiPlayer(deviceId);
+	pmp = new MidiPlayer(deviceId, extraInfo);
+	if(pmp->GetInitResult())
+	{
+		switch (pmp->GetDeviceID())
+		{
+		case MIDI_DEVICE_USE_VST_PLUGIN:
+#ifdef _M_X64
+			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序仅支持64位的VST插件，不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
+#elif defined(_M_ARM)
+			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序仅支持ARM的VST插件，不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
+#elif defined(_M_ARM64)
+			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序仅支持ARM64的VST插件，不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
+#elif defined(_M_IX86)
+			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序仅支持32位的VST插件，不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
+#else
+			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
+#endif
+			break;
+		case MIDI_DEVICE_USE_SOUNDFONT2:default:
+			//TODO
+			//CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查文件是否是有效的音色库文件。"), NULL, MB_ICONEXCLAMATION);
+			CMDLG_MessageBox(hWindowDx, TEXT("SF2功能尚在制作中。"), NULL, MB_ICONEXCLAMATION);
+			break;
+		}
+		delete pmp;
+		pmp = nullptr;
+		return -1;
+	}
 	pmp->SetOnFinishPlay([](void*) {VMPlayer::_pObj->_OnFinishPlayCallback(); }, nullptr);
 	pmp->SetOnProgramChange([](BYTE ch, BYTE prog) {VMPlayer::_pObj->_OnProgramChangeCallback(ch, prog); });
 	pmp->SetOnControlChange([](BYTE ch, BYTE cc, BYTE val) {VMPlayer::_pObj->_OnControlChangeCallback(ch, cc, val); });
@@ -526,21 +565,23 @@ void VMPlayer::UpdateTextLastTick()
 
 void VMPlayer::ReChooseMIDIDevice()
 {
-	if (midiOutGetNumDevs() < 2)
+	while (true)
 	{
-		if (windowed)
-			MessageBox(hWindowDx, TEXT("没有其他MIDI设备可以选择。"), NULL, MB_ICONEXCLAMATION);
-		else
-			DxMessageBox((std::basic_string<TCHAR>(TEXT("没有其他MIDI设备可以选择。")) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
-		return;
-	}
-	UINT id = ChooseDevice();
-	if ((int)id >= -1)
-	{
+		TCHAR pluginExtraPath[MAX_PATH] = TEXT("");
+		UINT id = ChooseDevice(pluginExtraPath, false);
+		if (id == CHOOSE_DEVICE_USER_CLICKED_CANCEL)
+		{
+			if (pmp)
+				return;
+			id = MIDI_MAPPER;
+		}
 		EndMIDIPlayer();
-		InitMIDIPlayer(id);
-		if (filepath[0])
-			OnLoadMIDI(filepath);
+		if (InitMIDIPlayer(id, pluginExtraPath) == 0)
+		{
+			if (filepath[0])
+				OnLoadMIDI(filepath);
+			break;
+		}
 	}
 }
 
@@ -548,10 +589,7 @@ void VMPlayer::ReChooseMIDIInDevice()
 {
 	if (midiInGetNumDevs() == 0)
 	{
-		if (windowed)
-			MessageBox(hWindowDx, TEXT("没有MIDI输入设备可以选择。"), NULL, MB_ICONEXCLAMATION);
-		else
-			DxMessageBox((std::basic_string<TCHAR>(TEXT("没有MIDI输入设备可以选择。")) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
+		CMDLG_MessageBox(hWindowDx, TEXT("没有MIDI输入设备可以选择。"), NULL, MB_ICONEXCLAMATION);
 		return;
 	}
 	UINT id = ChooseInputDevice();
@@ -634,23 +672,6 @@ void VMPlayer::OnDraw()
 	ScreenFlip();
 }
 
-BOOL SelectFile(TCHAR *filepath, TCHAR *filename)
-{
-	OPENFILENAME ofn = { sizeof OPENFILENAME };
-	ofn.lStructSize = sizeof OPENFILENAME;
-	ofn.hwndOwner = GetActiveWindow();
-	ofn.hInstance = nullptr;
-	ofn.lpstrFilter = TEXT("MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0");
-	ofn.lpstrFile = filepath;
-	ofn.lpstrTitle = TEXT("选择文件");
-	ofn.nMaxFile = MAX_PATH;
-	ofn.lpstrFileTitle = filename;
-	ofn.nMaxFileTitle = MAX_PATH;
-	ofn.Flags = OFN_HIDEREADONLY;
-	ofn.lpstrDefExt = TEXT("mid");
-	return GetOpenFileName(&ofn);
-}
-
 class KeyManager
 {
 public:
@@ -680,6 +701,7 @@ void VMPlayer::OnLoop()
 	{
 		windowed ^= TRUE;
 		ChangeWindowMode(windowed);
+		CMDLG_SetUseDxDialogs(!windowed);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_SPACE))
 		OnCommandPlay();
@@ -687,7 +709,7 @@ void VMPlayer::OnLoop()
 		OnCommandStop();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_O))
 	{
-		if (windowed ? SelectFile(filepath, NULL) : DxChooseFilePath(filepath, filepath))
+		if (CMDLG_ChooseFile(hWindowDx,filepath, filepath, TEXT("MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0")))
 			OnLoadMIDI(filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_E))
@@ -752,10 +774,7 @@ void VMPlayer::OnLoop()
 				}
 				metalist.pop_front();
 			}
-			if (windowed)
-				ShellMessageBox(NULL, hWindowDx, metainfo.c_str(), L"MIDI数据", MB_ICONINFORMATION);
-			else
-				DxMessageBox((metainfo + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
+			CMDLG_MessageBox(hWindowDx, metainfo.c_str(), TEXT("MIDI数据"), MB_ICONINFORMATION, true);
 		}
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_LEFT))OnSeekBar(-1);
@@ -770,6 +789,11 @@ void VMPlayer::OnLoop()
 		ReChooseMIDIDevice();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_N))
 		ReChooseMIDIInDevice();
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_W))
+	{
+		if (pmp->GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+			((VstPlugin*)pmp->GetPlugin())->ShowPluginWindow(!((VstPlugin*)pmp->GetPlugin())->IsPluginWindowShown());
+	}
 	for (int i = KEY_INPUT_1; i <= KEY_INPUT_0; i++)
 	{
 		if (KeyManager::CheckOnHitKey(i))
@@ -781,37 +805,7 @@ void VMPlayer::OnLoop()
 		}
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_F1))
-	{
-		if (windowed)
-		{
-			//MessageBox(hWindowDx, helpInfo, TEXT("帮助"), MB_ICONINFORMATION);
-			TASKDIALOGCONFIG tdc{};
-			tdc.cbSize = sizeof(tdc);
-			tdc.hwndParent = hWindowDx;
-			tdc.hInstance = GetModuleHandle(NULL);
-			tdc.dwFlags = TDF_ENABLE_HYPERLINKS;
-			tdc.dwCommonButtons = TDCBF_OK_BUTTON;
-			tdc.pszWindowTitle = TEXT("帮助");
-			tdc.pszMainIcon = TD_INFORMATION_ICON;
-			std::basic_string<TCHAR>msgWithURL = helpInfo;
-			msgWithURL = std::regex_replace(msgWithURL, std::basic_regex<TCHAR>(TEXT("(https?://[A-Za-z0-9_\\-\\./]+)")), TEXT("<a href=\"$1\">$1</a>"));
-			tdc.pszContent = msgWithURL.c_str();
-#undef LONG_PTR
-			tdc.pfCallback = [](HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
-			{
-				switch (msg)
-				{
-				case TDN_HYPERLINK_CLICKED:
-					ShellExecute(hwnd, TEXT("open"), (LPCWSTR)lParam, NULL, NULL, SW_SHOWNORMAL);
-					break;
-				}
-				return S_OK;
-			};
-			TaskDialogIndirect(&tdc, NULL, NULL, NULL);
-		}
-		else
-			DxMessageBox((std::basic_string<TCHAR>(helpInfo) + LoadLocalString(IDS_DXMSG_APPEND_OK)).c_str());
-	}
+		CMDLG_InfoBox(hWindowDx, helpInfo, TEXT("帮助"));
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_R))
 		showProgram = (showProgram + 1) % 5;
 }

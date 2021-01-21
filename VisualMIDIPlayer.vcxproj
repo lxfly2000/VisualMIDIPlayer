@@ -179,6 +179,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ChooseList.c" />
+    <ClCompile Include="CommonDialogs.cpp" />
     <ClCompile Include="DxKeyTrigger.cpp" />
     <ClCompile Include="DxShell.cpp" />
     <ClCompile Include="Instruments.cpp" />
@@ -189,6 +190,7 @@
   <ItemGroup>
     <ClInclude Include="ChooseList.h" />
     <ClInclude Include="ChooseListRes.h" />
+    <ClInclude Include="CommonDialogs.h" />
     <ClInclude Include="DxKeyTrigger.h" />
     <ClInclude Include="DxShell.h" />
     <ClInclude Include="Instruments.h" />

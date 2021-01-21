@@ -36,6 +36,9 @@
     <ClCompile Include="Instruments.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="CommonDialogs.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MIDIScreen.h">
@@ -63,6 +66,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Instruments.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonDialogs.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
