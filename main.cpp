@@ -1,3 +1,6 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+
 #include<DxLib.h>
 #include<MidiPlayer.h>
 #include"MIDIScreen.h"
