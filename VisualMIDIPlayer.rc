@@ -51,7 +51,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,3,0
+ FILEVERSION 2,6,4,0
  PRODUCTVERSION 2,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -69,7 +69,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "lxfly2000"
             VALUE "FileDescription", "Visual MIDI Player"
-            VALUE "FileVersion", "2.6.3.0"
+            VALUE "FileVersion", "2.6.4.0"
             VALUE "InternalName", "VisualMIDIPlayer.exe"
             VALUE "LegalCopyright", "Copyright (C) 2016бл2020 lxfly2000 (https://github.com/lxfly2000/VisualMIDIPlayer)"
             VALUE "OriginalFilename", "VisualMIDIPlayer.exe"
