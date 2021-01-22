@@ -6,3 +6,5 @@ MIDI player with keyboard view.
 ## 下载
 [GitHub](https://github.com/lxfly2000/VisualMIDIPlayer/releases)  
 [Old Versions](https://pan.baidu.com/s/1b0Tkce)
+
+**从 2.5 版本起，程序不再支持 Win7 系统。**
