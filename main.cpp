@@ -14,7 +14,7 @@
 #pragma comment(lib,"ComCtl32.lib")
 
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
-#define CHOOSE_DEVICE_USER_CLICKED_CANCEL (UINT)-4
+#define CHOOSE_DEVICE_USER_CLICKED_CANCEL (UINT)-2
 #define FILTER_VST "VST插件\0*.dll\0所有文件\0*\0\0"
 #define FILTER_SOUNDFONT "SF2音色库\0*.sf2\0所有文件\0*\0\0"
 
@@ -127,7 +127,8 @@ unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 	{
 		std::vector<const TCHAR*>midiList;
 		std::vector<std::basic_string<TCHAR>> midiListVector;
-		for (int i = -1; i < (int)nMidiDev; i++)
+		midiListVector.push_back(TEXT("MIDI 映射器"));
+		for (int i = 0; i < (int)nMidiDev; i++)
 		{
 			midiOutGetDevCaps((UINT_PTR)i, &caps, sizeof(caps));
 			midiListVector.push_back(caps.szPname);
@@ -137,7 +138,8 @@ unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 		midiList.push_back(TEXT("使用VST插件……"));
 		midiList.push_back(TEXT("使用SF2音色库……"));
 		tagChooseDeviceDialog:
-		cur = (UINT)CMDLG_ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(), midiDeviceID + 1);
+		cur = (UINT)CMDLG_ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(),
+			(midiDeviceID == MIDI_DEVICE_USE_VST_PLUGIN || midiDeviceID == MIDI_DEVICE_USE_SOUNDFONT2) ? nMidiDev - midiDeviceID - 2 : midiDeviceID + 1);
 		if (cur == (UINT)-1)
 			cur = CHOOSE_DEVICE_USER_CLICKED_CANCEL;
 		else if (cur == nMidiDev + 1)
