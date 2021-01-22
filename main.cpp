@@ -176,7 +176,7 @@ unsigned VMPlayer::ChooseInputDevice()
 		}
 		for (UINT i = 0; i < nMidiDev; i++)
 			midiList.push_back(midiListVector[i].c_str());
-		midiList.insert(midiList.begin(), TEXT("[-] 不使用"));
+		midiList.insert(midiList.begin(), TEXT("不使用"));
 		cur = (UINT)CMDLG_ChooseList(hWindowDx, TEXT("选择 MIDI 输入设备"), midiList.data(), (int)midiList.size(), midiInDeviceID + 1);
 		if (cur == (UINT)-1)
 			cur = CHOOSE_DEVICE_USER_CLICKED_CANCEL;
