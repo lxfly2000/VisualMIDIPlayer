@@ -13,6 +13,19 @@
 
 #pragma comment(lib,"ComCtl32.lib")
 
+#ifdef _M_X64
+#pragma comment(lib,"libMidiPlayer/XAudio2_8/Lib/winv6.3/um/x64/XAudio2.lib")
+#elif defined(_M_ARM)
+#pragma comment(lib,"libMidiPlayer/XAudio2_8/Lib/winv6.3/um/arm/XAudio2.lib")
+#elif defined(_M_ARM64)
+#error "The ARM64 architecture is not supported yet."
+#elif defined(_M_IX86)
+#pragma comment(lib,"libMidiPlayer/XAudio2_8/Lib/winv6.3/um/x86/XAudio2.lib")
+#else
+#error "XAudio2 doesn't support this platform."
+#endif
+
+
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
 #define CHOOSE_DEVICE_USER_CLICKED_CANCEL (UINT)-2
 #define FILTER_VST "VST插件\0*.dll\0所有文件\0*\0\0"
