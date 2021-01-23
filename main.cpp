@@ -157,6 +157,12 @@ unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 			cur = CHOOSE_DEVICE_USER_CLICKED_CANCEL;
 		else if (cur == nMidiDev + 1)
 		{
+			static bool vstWarned = false;
+			if (!vstWarned)
+			{
+				CMDLG_MessageBox(hWindowDx, TEXT("注意：本功能目前对部分VST插件支持效果不好，请斟酌使用。"), midiList[cur], MB_ICONEXCLAMATION);
+				vstWarned = true;
+			}
 			if (CMDLG_ChooseFile(hWindowDx,extraInfoPath, extraInfoPath, TEXT(FILTER_VST)) == FALSE)
 				goto tagChooseDeviceDialog;
 			cur = MIDI_DEVICE_USE_VST_PLUGIN;
@@ -334,9 +340,8 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId, LPVOID extraInfo)
 #endif
 			break;
 		case MIDI_DEVICE_USE_SOUNDFONT2:default:
-			//TODO
-			//CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查文件是否是有效的音色库文件。"), NULL, MB_ICONEXCLAMATION);
-			CMDLG_MessageBox(hWindowDx, TEXT("SF2功能尚在制作中。"), NULL, MB_ICONEXCLAMATION);
+			//CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查文件是否是有效的SF2音色库文件。"), NULL, MB_ICONEXCLAMATION);
+			CMDLG_MessageBox(hWindowDx, TEXT("SF2功能尚未制作。"), NULL, MB_ICONEXCLAMATION);
 			break;
 		}
 		delete pmp;
