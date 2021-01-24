@@ -149,7 +149,7 @@ unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 		for (UINT i = 0; i < nMidiDev+1; i++)
 			midiList.push_back(midiListVector[i].c_str());
 		midiList.push_back(TEXT("使用VST插件……"));
-		midiList.push_back(TEXT("使用SF2音色库……"));
+		//midiList.push_back(TEXT("使用SF2音色库……"));
 		tagChooseDeviceDialog:
 		cur = (UINT)CMDLG_ChooseList(hWindowDx, TEXT("选择 MIDI 输出设备"), midiList.data(), (int)midiList.size(),
 			(midiDeviceID == MIDI_DEVICE_USE_VST_PLUGIN || midiDeviceID == MIDI_DEVICE_USE_SOUNDFONT2) ? nMidiDev - midiDeviceID - 2 : midiDeviceID + 1);
