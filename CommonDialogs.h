@@ -16,3 +16,8 @@ int CMDLG_ChooseList(HWND hwnd,LPCTSTR title,LPCTSTR *options,int cOptions,int d
 //outputPath只有在按了确定时才会被更新
 //hwnd仅在使用Win32对话框时有效
 int CMDLG_ChooseFile(HWND hwnd,LPCTSTR initPath, LPTSTR outputPath,LPCTSTR filter);
+//initPath和outputPath可以为相同值
+//返回值：按确定时返回TRUE，否则返回FALSE
+//outputPath只有在按了确定时才会被更新
+//hwnd仅在使用Win32对话框时有效
+int CMDLG_ChooseSaveFile(HWND hwnd, LPCTSTR initPath, LPTSTR outputPath, LPCTSTR filter);

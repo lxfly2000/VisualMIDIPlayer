@@ -30,6 +30,7 @@
 #define CHOOSE_DEVICE_USER_CLICKED_CANCEL (UINT)-2
 #define FILTER_VST "VST插件\0*.dll\0所有文件\0*\0\0"
 #define FILTER_SOUNDFONT "SF2音色库\0*.sf2\0所有文件\0*\0\0"
+#define FILTER_MIDI "MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0"
 
 class DPIInfo
 {
@@ -117,7 +118,7 @@ private:
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
 const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n")
-	TEXT("R: 显示音色\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nW: 显示/隐藏VST窗口\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n")
+	TEXT("R: 显示音色\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nW: 显示/隐藏VST窗口\nT: 导出音频(使用VST播放时)\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n")
 	TEXT("Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n")
 	TEXT("屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n")
 	TEXT("屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n")
@@ -732,7 +733,7 @@ void VMPlayer::OnLoop()
 		OnCommandStop();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_O))
 	{
-		if (CMDLG_ChooseFile(hWindowDx,filepath, filepath, TEXT("MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0")))
+		if (CMDLG_ChooseFile(hWindowDx,filepath, filepath, TEXT(FILTER_MIDI)))
 			OnLoadMIDI(filepath);
 	}
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_E))
@@ -816,6 +817,26 @@ void VMPlayer::OnLoop()
 	{
 		if (pmp->GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 			((VstPlugin*)pmp->GetPlugin())->ShowPluginWindow(!((VstPlugin*)pmp->GetPlugin())->IsPluginWindowShown());
+	}
+	if (KeyManager::CheckOnHitKey(KEY_INPUT_T))
+	{
+		if (pmp->GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
+		{
+			TCHAR fileToExport[MAX_PATH], wavePath[MAX_PATH];
+			if (pmp->GetPlayStatus() == TRUE)
+				CMDLG_MessageBox(hWindowDx, TEXT("请先停止播放，调整VST的参数为初始状态并确保没有其他因素影响VST的声音后再导出。"), NULL, MB_ICONEXCLAMATION);
+			else if (CMDLG_ChooseFile(hWindowDx, filepath, fileToExport, TEXT(FILTER_MIDI)))
+			{
+				sprintfDx(wavePath, TEXT("%s.wav"), fileToExport);
+				if (CMDLG_ChooseSaveFile(hWindowDx, wavePath, wavePath, TEXT("波形音频（仅限32位IEEE浮点48KHz格式）\0*.wav\0\0")))
+				{
+					if (pmp->PluginExportToWav(fileToExport, wavePath) == 0)
+						CMDLG_MessageBox(hWindowDx, TEXT("导出成功。"), fileToExport, MB_ICONINFORMATION);
+					else
+						CMDLG_MessageBox(hWindowDx, TEXT("导出失败。"), fileToExport, MB_ICONERROR);
+				}
+			}
+		}
 	}
 	for (int i = KEY_INPUT_1; i <= KEY_INPUT_0; i++)
 	{

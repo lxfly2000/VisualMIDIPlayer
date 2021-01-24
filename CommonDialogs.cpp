@@ -61,7 +61,7 @@ int CMDLG_ChooseList(HWND hwnd, LPCTSTR title, LPCTSTR *options, int cOptions, i
 		return ChooseList(hwnd, title, options, cOptions, defaultChoose, NULL, NULL);
 }
 
-BOOL SelectFile(HWND hwnd, TCHAR *filepath, TCHAR *filename,LPCTSTR filter)
+BOOL SelectFile(HWND hwnd, TCHAR* filepath, TCHAR* filename, LPCTSTR filter, bool isSave = false)
 {
 	OPENFILENAME ofn{};
 	ofn.lStructSize = sizeof OPENFILENAME;
@@ -69,13 +69,15 @@ BOOL SelectFile(HWND hwnd, TCHAR *filepath, TCHAR *filename,LPCTSTR filter)
 	ofn.hInstance = NULL;
 	ofn.lpstrFilter = filter;
 	ofn.lpstrFile = filepath;
-	ofn.lpstrTitle = TEXT("选择文件");
+	ofn.lpstrTitle = isSave ? TEXT("选择保存位置") : TEXT("选择文件");
 	ofn.nMaxFile = MAX_PATH;
 	ofn.lpstrFileTitle = filename;
 	ofn.nMaxFileTitle = MAX_PATH;
 	ofn.Flags = OFN_HIDEREADONLY;
+	if (isSave)
+		ofn.Flags |= OFN_OVERWRITEPROMPT;
 	ofn.lpstrDefExt = NULL;
-	return GetOpenFileName(&ofn);
+	return isSave ? GetSaveFileName(&ofn) : GetOpenFileName(&ofn);
 }
 
 int CMDLG_ChooseFile(HWND hwnd,LPCTSTR initPath, LPTSTR outputPath, LPCTSTR filter)
@@ -93,6 +95,36 @@ int CMDLG_ChooseFile(HWND hwnd,LPCTSTR initPath, LPTSTR outputPath, LPCTSTR filt
 		TCHAR filePath[MAX_PATH];
 		lstrcpy(filePath, initPath);
 		if (SelectFile(hwnd,filePath, NULL, filter))
+		{
+			lstrcpy(outputPath, filePath);
+			return TRUE;
+		}
+		return FALSE;
+	}
+}
+
+int CMDLG_ChooseSaveFile(HWND hwnd, LPCTSTR initPath, LPTSTR outputPath, LPCTSTR filter)
+{
+	if (useDxDialogs)
+	{
+		TCHAR buf[MAX_PATH];
+		strcpyDx(buf, initPath);
+		if (DxGetInputString(LoadLocalString(IDS_DXMSG_INPUT_SAVE_PATH), buf, MAX_PATH) != -1)
+		{
+			strcpyDx(outputPath, buf);
+			return TRUE;
+		}
+		return FALSE;
+	}
+	else if (initPath == outputPath)
+	{
+		return SelectFile(hwnd, outputPath, NULL, filter, true);
+	}
+	else
+	{
+		TCHAR filePath[MAX_PATH];
+		lstrcpy(filePath, initPath);
+		if (SelectFile(hwnd, filePath, NULL, filter, true))
 		{
 			lstrcpy(outputPath, filePath);
 			return TRUE;
