@@ -36,7 +36,21 @@ int tempX, tempY;
 
 void MIDIScreen::DrawWhiteKey()
 {
-	//ÏÈ»­°µ¼ü£¬ÔÙ»­ÁÁ¼ü
+	//ÏÈ»­ÁÁ¼ü£¬ÔÙ»­°µ¼ü
+	for (int j = MAX_CHANNEL - 1; j >= 0; j--)
+	{
+		for (int i = KEY_END - KEY_START; i >= 0; i--)
+		{
+			if (GetNumWhiteKey(i) != -1)
+			{
+				tempX = drawWidth_keyWhite * GetNumWhiteKey(i) + x;
+				tempY = drawLength_keyWhite * j + y;
+				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
+				tempX += (int)(pplayer->GetChannelPitchBend(j) * width_avgKey);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, presentProgram ? keyColors[chPrograms[j] % 8] : colorWhiteKeyPressed, TRUE);
+			}
+		}
+	}
 	for (int j = MAX_CHANNEL - 1; j >= 0; j--)
 	{
 		for (int i = KEY_END - KEY_START; i >= 0; i--)
@@ -47,18 +61,6 @@ void MIDIScreen::DrawWhiteKey()
 				tempY = drawLength_keyWhite * j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, colorWhiteKey, FALSE);
-			}
-		}
-	}
-	for (int j = MAX_CHANNEL - 1; j >= 0; j--)
-	{
-		for (int i = KEY_END - KEY_START; i >= 0; i--)
-		{
-			if (GetNumWhiteKey(i) != -1)
-			{
-				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
-				tempX += (int)(pplayer->GetChannelPitchBend(j) * width_avgKey);
-				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, presentProgram ? keyColors[chPrograms[j] % 8] : colorWhiteKeyPressed, TRUE);
 			}
 		}
 	}
@@ -86,6 +88,8 @@ void MIDIScreen::DrawBlackKey()
 		{
 			if (GetNumBlackKey(i) != -1)
 			{
+				tempX = drawWidth_keyWhite * GetNumBlackKey(i) + start_keyBlackX;
+				tempY = drawLength_keyWhite * j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j) * width_avgKey);
 				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, presentProgram ? keyColors[chPrograms[j] % 8] : colorBlackKeyPressed, TRUE);
