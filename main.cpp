@@ -26,6 +26,7 @@
 #endif
 
 
+#define APP_TITLE "Visual MIDI Player"
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
 #define CHOOSE_DEVICE_USER_CLICKED_CANCEL (UINT)-2
 #define FILTER_VST "VST插件\0*.dll\0所有文件\0*\0\0"
@@ -158,12 +159,6 @@ unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 			cur = CHOOSE_DEVICE_USER_CLICKED_CANCEL;
 		else if (cur == nMidiDev + 1)
 		{
-			static bool vstWarned = false;
-			if (!vstWarned)
-			{
-				CMDLG_MessageBox(hWindowDx, TEXT("注意：本功能目前对部分VST插件支持效果不好，请斟酌使用。"), midiList[cur], MB_ICONEXCLAMATION);
-				vstWarned = true;
-			}
 			if (CMDLG_ChooseFile(hWindowDx,extraInfoPath, extraInfoPath, TEXT(FILTER_VST)) == FALSE)
 				goto tagChooseDeviceDialog;
 			cur = MIDI_DEVICE_USE_VST_PLUGIN;
@@ -240,7 +235,7 @@ int VMPlayer::Init(TCHAR* param)
 		param[0] = TEXT('\0');
 	}
 	SetOutApplicationLogValidFlag(FALSE);
-	SetWindowText(TEXT("Visual MIDI Player"));
+	SetWindowText(TEXT(APP_TITLE));
 	windowed = strstrDx(param, TEXT("/f")) ? FALSE : TRUE;
 	if (!windowed)
 		param[0] = 0;
@@ -830,10 +825,15 @@ void VMPlayer::OnLoop()
 				sprintfDx(wavePath, TEXT("%s.wav"), fileToExport);
 				if (CMDLG_ChooseSaveFile(hWindowDx, wavePath, wavePath, TEXT("波形音频（仅限32位IEEE浮点48KHz格式）\0*.wav\0\0")))
 				{
+					std::basic_string<TCHAR>titleConverting = TEXT("正在导出 ");
+					titleConverting.append(wavePath);
+					titleConverting.append(TEXT(" ……"));
+					SetWindowText(titleConverting.c_str());
 					if (pmp->PluginExportToWav(fileToExport, wavePath) == 0)
 						CMDLG_MessageBox(hWindowDx, TEXT("导出成功。"), fileToExport, MB_ICONINFORMATION);
 					else
 						CMDLG_MessageBox(hWindowDx, TEXT("导出失败。"), fileToExport, MB_ICONERROR);
+					SetWindowText(TEXT(APP_TITLE));
 				}
 			}
 		}
