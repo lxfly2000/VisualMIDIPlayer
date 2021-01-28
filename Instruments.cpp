@@ -1,6 +1,6 @@
 #include "Instruments.h"
 
-const wchar_t programName[128][30] = {
+const wchar_t programName[128][24] = {
 L"Acoustic Grand Piano",
 L"Bright Acoustic Piano",
 L"Electric Grand Piano",
@@ -131,7 +131,7 @@ L"Applause",
 L"Gunshot"
 };
 
-const wchar_t drumName[128][30] = {
+const wchar_t drumName[128][17] = {
 L"Standard",
 L"Standard 2",
 L"Standard L/R",

@@ -16,12 +16,9 @@
 
 
 MIDIScreen::MIDIScreen() :colorWhiteKey(KEY_COLOR_GM), colorBlackKey(KEY_COLOR_GM),
-colorWhiteKeyPressed(keyColors[0]), colorBlackKeyPressed(keyColors[0]), presentPressure(true), presentProgram(false)
+colorWhiteKeyPressed(keyColors[0]), colorBlackKeyPressed(keyColors[0]), presentPressure(true), presentProgram(false), pPrograms(NULL)
 {
 	SetRectangle(0, 0, 640);
-	ZeroMemory(chPrograms, ARRAYSIZE(chPrograms));
-	ZeroMemory(chCC0, ARRAYSIZE(chCC0));
-	ZeroMemory(chCC32, ARRAYSIZE(chCC32));
 }
 
 void MIDIScreen::Draw()
@@ -47,7 +44,7 @@ void MIDIScreen::DrawWhiteKey()
 				tempY = drawLength_keyWhite * j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j) * width_avgKey);
-				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, presentProgram ? keyColors[chPrograms[j] % 8] : colorWhiteKeyPressed, TRUE);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyWhite + 1, tempY + drawLength_keyWhite - ROW_SPACING, presentProgram ? keyColors[pPrograms[j] % 8] : colorWhiteKeyPressed, TRUE);
 			}
 		}
 	}
@@ -92,7 +89,7 @@ void MIDIScreen::DrawBlackKey()
 				tempY = drawLength_keyWhite * j + y;
 				SetDrawBlendMode(DX_BLENDMODE_ALPHA, presentPressure ? 2 * pplayer->GetKeyPressure(j, i) : pplayer->GetKeyPressure(j, i) ? 255 : 0);
 				tempX += (int)(pplayer->GetChannelPitchBend(j) * width_avgKey);
-				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, presentProgram ? keyColors[chPrograms[j] % 8] : colorBlackKeyPressed, TRUE);
+				DrawBox(tempX, tempY, tempX + drawWidth_keyBlack, tempY + drawLength_keyBlack, presentProgram ? keyColors[pPrograms[j] % 8] : colorBlackKeyPressed, TRUE);
 			}
 		}
 	}
@@ -198,6 +195,11 @@ void MIDIScreen::SetBlackKeyPressedColor(int color)
 void MIDIScreen::SetPresentPressure(bool b)
 {
 	presentPressure = b;
+}
+
+void MIDIScreen::SetProgramsPointer(const PBYTE p)
+{
+	pPrograms = p;
 }
 
 void MIDIScreen::ChangeDefaultKeyColorByMIDIMode(int midiMode)

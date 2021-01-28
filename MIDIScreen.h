@@ -23,6 +23,8 @@ public:
 	void SetBlackKeyPressedColor(int color);
 	//设置是否显示力度
 	void SetPresentPressure(bool);
+	//设置音色号指针
+	void SetProgramsPointer(const PBYTE p);
 private:
 	//绘制白键
 	void DrawWhiteKey();
@@ -40,9 +42,9 @@ private:
 	static int tableWhiteKey[];
 	static int tableBlackKey[];
 	static int keyColors[];
+	const BYTE* pPrograms;
 public:
 	bool presentProgram;
-	int chPrograms[16], chCC0[16], chCC32[16];
 	//0=GM 1=GS 2=XG 3=GM2
 	void ChangeDefaultKeyColorByMIDIMode(int midiMode);
 };

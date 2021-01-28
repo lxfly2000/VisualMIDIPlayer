@@ -33,6 +33,16 @@
 #define FILTER_SOUNDFONT "SF2音色库\0*.sf2\0所有文件\0*\0\0"
 #define FILTER_MIDI "MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0"
 
+enum CONTROL_CHANGE_NUMBER
+{
+	CC_BANK_SELECT_MSB=0,//Def:0
+	CC_MODULATION=1,//Def:0
+	CC_VOLUME=7,//Def:100
+	CC_PAN=10,//Def:64
+	CC_EXPRESSION=11,//Def:127
+	CC_BANK_SELECT_LSB=32//Def:0
+};
+
 class DPIInfo
 {
 public:
@@ -63,8 +73,8 @@ public:
 	MidiPlayer* pmp = nullptr;
 protected:
 	void _OnFinishPlayCallback();
-	void _OnProgramChangeCallback(int channel, int program);
-	void _OnControlChangeCallback(int channel, int cc, int val);
+	void _OnProgramChangeCallback(BYTE channel, BYTE program);
+	void _OnControlChangeCallback(BYTE channel, BYTE cc, BYTE val);
 	void _OnSysExCallback(PBYTE data,size_t length);
 	void _OnLyricText(const MIDIMetaStructure& meta);
 	bool OnLoadMIDI(TCHAR*);
@@ -85,6 +95,7 @@ private:
 	void OnLoop();
 	bool LoadMIDI(const TCHAR* path);
 	void DrawTime();
+	void DrawChannelInfo();
 	void UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path, bool clearLyrics = false);
 	void UpdateTextLastTick();
 	void ReChooseMIDIDevice();
@@ -105,7 +116,10 @@ private:
 	TCHAR szStr[156];
 	TCHAR szTimeInfo[100];
 	TCHAR szLastTick[12];
-	int showProgram = 0;//0=不显示，1=显示3列音色号，2=显示音色名，3=显示1列音色号和音色名，4=全部显示
+	//0=不显示，1=显示3列音色号，2=显示音色名，3=显示1列音色号和音色名，4=显示3列音色号和音色名，
+	//5=用数字显示详细信息，6=用水平图形显示详细信息，7=用垂直图形显示详细信息，
+	//8=用数字显示详细信息和音色名，9=用水平图形显示详细信息和音色名，10=用垂直图形显示详细信息和音色名
+	int showProgram = 0;
 	int drawHelpLabelX, drawHelpLabelY;
 	int drawProgramX, drawProgramY, drawProgramOneChannelH;
 	bool isNonDropPlay = false;
@@ -113,22 +127,22 @@ private:
 	UINT midiDeviceID = 0,midiInDeviceID=-1;
 	int displayWinWidth;
 	TCHAR szLyric[128];
+	BYTE chPrograms[16];
+	BYTE chCC[16][128];
 
 	int stepsperbar = 4;
 };
 
 const TCHAR helpLabel[] = TEXT("F1:帮助");
 const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C: 减速\nV: 用不同的颜色表示音色\nI: 显示MIDI数据\n")
-	TEXT("R: 显示音色\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nW: 显示/隐藏VST窗口\nT: 导出音频(使用VST播放时)\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n")
+	TEXT("R: 显示音色等通道信息\nD: 重新选择MIDI输出设备\nN: 重新选择MIDI输入设备\nW: 显示/隐藏VST窗口\nT: 导出音频(使用VST播放时)\nF11: 切换全屏显示\n1,2...9,0: 静音/取消静音第1,2...9,10通道\n")
 	TEXT("Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n")
-	TEXT("屏幕左侧三栏数字分别表示：\n音色，CC0，CC32\n\n")
+	TEXT("通道信息的各数值分别表示：\n音色，CC0，CC32，调制(Modulation)，音量(Volume)，平衡(Pan)，表情(Expression)\n\n")
 	TEXT("屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n")
 	TEXT("制作：lxfly2000\nhttps://github.com/lxfly2000/VisualMIDIPlayer");
 #include"Instruments.h"
 #include<vector>
 #include<string>
-std::vector<std::wstring>mapProgramName;
-std::vector<std::wstring>mapDrumName;
 
 VMPlayer* VMPlayer::_pObj = nullptr;
 WNDPROC VMPlayer::dxProcess = nullptr;
@@ -218,6 +232,30 @@ LRESULT CALLBACK VMPlayer::ExtraProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
 
 int VMPlayer::Init(TCHAR* param)
 {
+	ZeroMemory(chPrograms, sizeof(chPrograms));
+	for (int channel = 0; channel < 16; channel++)
+	{
+		for (int cc = 0; cc < 128; cc++)
+		{
+			switch (cc)
+			{
+			case CC_VOLUME:
+				chCC[channel][cc] = 100;
+				break;
+			case CC_PAN:
+				chCC[channel][cc] = 64;
+				break;
+			case CC_EXPRESSION:
+				chCC[channel][cc] = 127;
+				break;
+			default:
+				chCC[channel][cc] = 0;
+				break;
+			}
+		}
+	}
+	ms.SetProgramsPointer(chPrograms);
+
 	_pObj = this;
 	int w = 800, h = 600;
 	strcpyDx(filepath, TEXT(""));
@@ -268,22 +306,6 @@ int VMPlayer::Init(TCHAR* param)
 	GetDrawStringSize(&drawHelpLabelX, &drawHelpLabelY, &lineCount, helpLabel, (int)strlenDx(helpLabel));
 	drawHelpLabelX = screenWidth - drawHelpLabelX;
 	drawHelpLabelY = 0;
-
-	for (int i = 0; i < ARRAYSIZE(programName); i++)
-	{
-		TCHAR tmp[30];
-		wsprintf(tmp, TEXT("%3d %s"), i, programName[i]);
-		mapProgramName.push_back(tmp);
-	}
-	for (int i = 0; i < ARRAYSIZE(drumName); i++)
-	{
-		TCHAR tmp[30];
-		if (lstrlen(drumName[i]) == 0)
-			wsprintf(tmp, TEXT("%3d"), i);
-		else
-			wsprintf(tmp, TEXT("%3d %s"), i, drumName[i]);
-		mapDrumName.push_back(tmp);
-	}
 
 	//http://nut-softwaredevelopper.hatenablog.com/entry/2016/02/25/001647
 	hWindowDx = GetMainWindowHandle();
@@ -412,22 +434,14 @@ void VMPlayer::_OnFinishPlayCallback()
 	UpdateString(szStr, ARRAYSIZE(szStr), pmp->GetPlayStatus() == TRUE, filepath, true);
 }
 
-void VMPlayer::_OnProgramChangeCallback(int channel, int program)
+void VMPlayer::_OnProgramChangeCallback(BYTE channel, BYTE program)
 {
-	ms.chPrograms[channel] = program;
+	chPrograms[channel] = program;
 }
 
-void VMPlayer::_OnControlChangeCallback(int channel, int cc, int val)
+void VMPlayer::_OnControlChangeCallback(BYTE channel, BYTE cc, BYTE val)
 {
-	switch (cc)
-	{
-	case 0:
-		ms.chCC0[channel] = val;
-		break;
-	case 32:
-		ms.chCC32[channel] = val;
-		break;
-	}
+	chCC[channel][cc] = val;
 }
 
 int memcmp_with_mask(LPCVOID a, LPCVOID b, LPCVOID mask, size_t length)
@@ -475,9 +489,9 @@ void VMPlayer::_OnSysExCallback(PBYTE data, size_t length)
 		return;
 	for (int i = 0; i < 16; i++)
 	{
-		ms.chPrograms[i] = 0;
-		ms.chCC0[i] = 0;
-		ms.chCC32[i] = 0;
+		chPrograms[i] = 0;
+		chCC[i][CC_BANK_SELECT_MSB] = 0;
+		chCC[i][CC_BANK_SELECT_LSB] = 0;
 	}
 }
 
@@ -656,39 +670,147 @@ void VMPlayer::OnDraw()
 	DrawTime();
 	DrawString(0, posYLowerText, szStr, 0x00FFFFFF);
 	if (showProgram)
-	{
-		for (int i = 0; i < 16; i++)
-		{
-			LPCTSTR p;
-			if (i == 9)
-				p = mapDrumName[ms.chPrograms[i]].c_str();
-			else
-				p = mapProgramName[ms.chPrograms[i]].c_str();
-			TCHAR pMode1[50];
-			switch (showProgram)
-			{
-			case 1:
-				strncpyDx(pMode1, p, 3);
-				sprintfDx(pMode1 + 3, TEXT(" %3d %3d"), ms.chCC0[i] & 0xFF, ms.chCC32[1] & 0xFF);
-				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, pMode1, 0x00FFFFFF);
-				break;
-			case 2:
-				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p + 4, 0x00FFFFFF);
-				break;
-			case 3:
-				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, p, 0x00FFFFFF);
-				break;
-			case 4:
-				strncpyDx(pMode1, p, 3);
-				sprintfDx(pMode1 + 3, TEXT(" %3d %3d"), ms.chCC0[i] & 0xFF, ms.chCC32[1] & 0xFF);
-				strcatDx(pMode1, p + 3);
-				DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, pMode1, 0x00FFFFFF);
-				break;
-			}
-		}
-	}
+		DrawChannelInfo();
 	DrawString(drawHelpLabelX, drawHelpLabelY, helpLabel, 0x00FFFFFF);
 	ScreenFlip();
+}
+
+static LPCTSTR GetSymbolicValueText(int v, bool center = false, bool vertical = false)
+{
+	static LPCTSTR symbolicValueText[] =
+	{
+		TEXT("　　"),TEXT("▏　"),TEXT("▎　"),TEXT("▍　"),TEXT("▌　"),TEXT("▋　"),TEXT("▊　"),TEXT("▉　"),TEXT("█　"),
+		TEXT("█▏"),TEXT("█▎"),TEXT("█▍"),TEXT("█▌"),TEXT("█▋"),TEXT("█▊"),TEXT("█▉"),TEXT("██")
+	};
+	static LPCTSTR symbolicValueTextVertical[] =
+	{
+		TEXT("　"),TEXT("▁"),TEXT("▂"),TEXT("▃"),TEXT("▄"),TEXT("▅"),TEXT("▆"),TEXT("▇"),TEXT("█")
+	};
+	static LPCTSTR symbolicValueTextCenter[] =
+	{
+		TEXT("<<<  "),TEXT(" <<  "),TEXT("  <  "),TEXT("  |  "),TEXT("  >  "),TEXT("  >> "),TEXT("  >>>")
+	};
+	if (center)
+		return symbolicValueTextCenter[v * ARRAYSIZE(symbolicValueTextCenter) / 128];
+	else if (vertical)
+		return symbolicValueTextVertical[v * ARRAYSIZE(symbolicValueTextVertical) / 128];
+	else
+		return symbolicValueText[v * ARRAYSIZE(symbolicValueText) / 128];
+}
+
+static LPCTSTR GetPanDigitalText(BYTE pan)
+{
+	static TCHAR panText[4];
+	if (pan < 64)
+		sprintfDx(panText, TEXT("-%2d"), 64 - pan);
+	else if (pan == 64)
+		strcpyDx(panText, TEXT("  0"));
+	else
+		sprintfDx(panText, TEXT("+%2d"), pan - 64);
+	return panText;
+}
+
+void VMPlayer::DrawChannelInfo()
+{
+#define GetChannelEnabledText(ch) pmp->GetChannelEnabled(ch)?TEXT(""):TEXT("静音")
+	for (int i = 0; i < 16; i++)
+	{
+		TCHAR buf[56];
+		switch (showProgram)
+		{
+		case 1:
+			sprintfDx(buf, TEXT("%3d %3d %3d"), chPrograms[i], chCC[i][CC_BANK_SELECT_MSB], chCC[i][CC_BANK_SELECT_LSB]);
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 2:
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, i==9?drumName[chPrograms[i]]:programName[chPrograms[i]], 0x00FFFFFF);
+			break;
+		case 3:
+			sprintfDx(buf, TEXT("%3d %s"), chPrograms[i], i == 9 ? drumName[chPrograms[i]] : programName[chPrograms[i]]);
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 4:
+			sprintfDx(buf, TEXT("%3d %3d %3d %s"), chPrograms[i], chCC[i][CC_BANK_SELECT_MSB], chCC[i][CC_BANK_SELECT_LSB],
+				i == 9 ? drumName[chPrograms[i]] : programName[chPrograms[i]]);
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 5://7*4+2==30
+			sprintfDx(buf, TEXT("%3d %3d %3d %3d %3d %s %3d %s"),
+				chPrograms[i],
+				chCC[i][CC_BANK_SELECT_MSB],
+				chCC[i][CC_BANK_SELECT_LSB],
+				chCC[i][CC_MODULATION],
+				chCC[i][CC_VOLUME],
+				GetPanDigitalText(chCC[i][CC_PAN]),
+				chCC[i][CC_EXPRESSION],
+				GetChannelEnabledText(i));
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 6://3*4+2+5+2+2+2=25
+			sprintfDx(buf, TEXT("%3d %3d %3d %s%s%s%s%s"),
+				chPrograms[i],
+				chCC[i][CC_BANK_SELECT_MSB],
+				chCC[i][CC_BANK_SELECT_LSB],
+				GetSymbolicValueText(chCC[i][CC_MODULATION]),
+				GetSymbolicValueText(chCC[i][CC_VOLUME]),
+				GetSymbolicValueText(chCC[i][CC_PAN], true),
+				GetSymbolicValueText(chCC[i][CC_EXPRESSION]),
+				GetChannelEnabledText(i));
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 7://3*4+1+5+2+2+2=24
+			sprintfDx(buf, TEXT("%3d %3d %3d %s %s%s%s %s"),
+				chPrograms[i],
+				chCC[i][CC_BANK_SELECT_MSB],
+				chCC[i][CC_BANK_SELECT_LSB],
+				GetSymbolicValueText(chCC[i][CC_MODULATION], false, true),
+				GetSymbolicValueText(chCC[i][CC_VOLUME],false,true),
+				GetSymbolicValueText(chCC[i][CC_PAN], true,true),
+				GetSymbolicValueText(chCC[i][CC_EXPRESSION], false, true),
+				GetChannelEnabledText(i));
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 8://7*4+3+23=54
+			sprintfDx(buf, TEXT("%3d %3d %3d %3d %3d %s %3d %s\n%s"),
+				chPrograms[i],
+				chCC[i][CC_BANK_SELECT_MSB],
+				chCC[i][CC_BANK_SELECT_LSB],
+				chCC[i][CC_MODULATION],
+				chCC[i][CC_VOLUME],
+				GetPanDigitalText(chCC[i][CC_PAN]),
+				chCC[i][CC_EXPRESSION],
+				GetChannelEnabledText(i),
+				i == 9 ? drumName[chPrograms[i]] : programName[chPrograms[i]]);
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 9://3*4+2+5+2+2+3+23=49
+			sprintfDx(buf, TEXT("%3d %3d %3d %s%s%s%s%s\n%s"),
+				chPrograms[i],
+				chCC[i][CC_BANK_SELECT_MSB],
+				chCC[i][CC_BANK_SELECT_LSB],
+				GetSymbolicValueText(chCC[i][CC_MODULATION]),
+				GetSymbolicValueText(chCC[i][CC_VOLUME]),
+				GetSymbolicValueText(chCC[i][CC_PAN], true),
+				GetSymbolicValueText(chCC[i][CC_EXPRESSION]),
+				GetChannelEnabledText(i),
+				i == 9 ? drumName[chPrograms[i]] : programName[chPrograms[i]]);
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		case 10://3*4+1+5+2+2+3+23=48
+			sprintfDx(buf, TEXT("%3d %3d %3d %s %s%s%s %s\n%s"),
+				chPrograms[i],
+				chCC[i][CC_BANK_SELECT_MSB],
+				chCC[i][CC_BANK_SELECT_LSB],
+				GetSymbolicValueText(chCC[i][CC_MODULATION], false, true),
+				GetSymbolicValueText(chCC[i][CC_VOLUME], false, true),
+				GetSymbolicValueText(chCC[i][CC_PAN], true,true),
+				GetSymbolicValueText(chCC[i][CC_EXPRESSION], false, true),
+				GetChannelEnabledText(i),
+				i == 9 ? drumName[chPrograms[i]] : programName[chPrograms[i]]);
+			DrawString(drawProgramX, drawProgramY + drawProgramOneChannelH * i, buf, 0x00FFFFFF);
+			break;
+		}
+	}
 }
 
 class KeyManager
@@ -851,7 +973,7 @@ void VMPlayer::OnLoop()
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_F1))
 		CMDLG_InfoBox(hWindowDx, helpInfo, TEXT("帮助"));
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_R))
-		showProgram = (showProgram + 1) % 5;
+		showProgram = (showProgram + 1) % 11;
 }
 
 void VMPlayer::UpdateString(TCHAR *str, int strsize, bool isplaying, const TCHAR *path, bool clearLyrics)
