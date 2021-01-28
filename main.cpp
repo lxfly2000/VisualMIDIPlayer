@@ -556,8 +556,8 @@ bool VMPlayer::LoadMIDI(const TCHAR* path)
 		int la = 0, lb = 1;
 		if (!FileRead_eof(hLoopFile))FileRead_scanf(hLoopFile, TEXT("%d"), &la);
 		if (!FileRead_eof(hLoopFile))FileRead_scanf(hLoopFile, TEXT("%d"), &lb);
-		loopIncludeStart = (bool)la;
-		loopIncludeEnd = (bool)lb;
+		loopIncludeStart = la ? true : false;
+		loopIncludeEnd = lb ? true : false;
 		pmp->SetLoop((float)posLoopStart, (float)posLoopEnd, loopIncludeStart, loopIncludeEnd);
 		loopOn = true;
 	}
@@ -829,7 +829,7 @@ void VMPlayer::OnLoop()
 					titleConverting.append(wavePath);
 					titleConverting.append(TEXT(" ……"));
 					SetWindowText(titleConverting.c_str());
-					if (pmp->PluginExportToWav(fileToExport, wavePath) == 0)
+					if (pmp->PluginExportToWav(fileToExport, wavePath, hWindowDx) == 0)
 						CMDLG_MessageBox(hWindowDx, TEXT("导出成功。"), fileToExport, MB_ICONINFORMATION);
 					else
 						CMDLG_MessageBox(hWindowDx, TEXT("导出失败。"), fileToExport, MB_ICONERROR);
