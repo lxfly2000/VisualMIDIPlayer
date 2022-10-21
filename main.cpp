@@ -381,8 +381,8 @@ int VMPlayer::InitMIDIInput(UINT deviceId)
 {
 	pmc = MidiController::CreateMidiController(deviceId, true);
 	pmc->SetOnClose([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->EndMIDIInput(); });
-	pmc->SetOnData([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->pmp->_ProcessMidiShortEvent(midiMessage, false); });
-	pmc->SetOnMoreData([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->pmp->_ProcessMidiShortEvent(midiMessage, false); });
+	pmc->SetOnData([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->pmp->_ProcessMidiShortEvent(midiMessage, true); });
+	pmc->SetOnMoreData([](DWORD_PTR timestamp_ms, DWORD_PTR midiMessage) {_pObj->pmp->_ProcessMidiShortEvent(midiMessage, true); });
 	if (pmp)
 		midiConnect((HMIDI)pmc->GetHandle(), pmp->GetHandle(), NULL);
 	return 0;
