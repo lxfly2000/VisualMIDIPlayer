@@ -345,6 +345,56 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId, LPVOID extraInfo)
 		switch (pmp->GetDeviceID())
 		{
 		case MIDI_DEVICE_USE_VST_PLUGIN:
+		{
+			IXAudio2*x = nullptr;
+			HRESULT hrx = XAudio2Create(&x);
+			if (x)
+				x->Release();
+			if (hrx == 0x80040154)
+			{
+				if (MessageBox(hWindowDx, TEXT("XAudio2加载失败。\n你需要安装或升级DirectX运行时来使用此功能。\n\n如需安装请点击“确定”。"), NULL, MB_ICONEXCLAMATION | MB_OKCANCEL) == IDOK)
+				{
+					TCHAR directxDir[MAX_PATH];
+					GetModuleFileName(GetModuleHandle(NULL), directxDir, ARRAYSIZE(directxDir));
+					*(TCHAR*)strrchrDx(directxDir, '\\') = 0;
+					TCHAR exePath[MAX_PATH];
+					wsprintf(exePath, TEXT("%s\\directx_Jun2010_redist.exe"), directxDir);
+					HRSRC hRsrc = FindResource(NULL, TEXT("directx_Jun2010_redist.exe"), TEXT("EXE"));
+					LPVOID dataPtr = LockResource(LoadResource(NULL, hRsrc));
+					std::ofstream f(exePath, std::ios::binary);
+					f.write((LPSTR)dataPtr, SizeofResource(NULL, hRsrc));
+					f.close();
+					lstrcat(directxDir, TEXT("\\DirectX"));
+					SHELLEXECUTEINFO se{ sizeof(SHELLEXECUTEINFO) };
+					se.hwnd = hWindowDx;
+					se.lpVerb = TEXT("open");
+					se.lpFile = exePath;
+					TCHAR params[MAX_PATH];
+					wsprintf(params, TEXT("/Q /C /T:\"%s\""), directxDir);
+					se.lpParameters = params;
+					se.fMask = SEE_MASK_NOCLOSEPROCESS;
+					if (ShellExecuteEx(&se))
+					{
+						WaitForSingleObject(se.hProcess, INFINITE);
+						DeleteFile(se.lpFile);
+						wsprintf(params, TEXT("%s\\DXSETUP.EXE"), directxDir);
+						if (GetFileAttributes(params) != INVALID_FILE_ATTRIBUTES)
+						{
+							se.lpFile = params;
+							se.lpDirectory = directxDir;
+							se.lpParameters = TEXT("/silent");
+							if (ShellExecuteEx(&se))
+								WaitForSingleObject(se.hProcess, INFINITE);
+						}
+						int len = lstrlen(directxDir);
+						directxDir[len] = directxDir[len + 1] = 0;
+						SHFILEOPSTRUCT sfo{ hWindowDx,FO_DELETE,directxDir,NULL,FOF_NOCONFIRMATION };
+						SHFileOperation(&sfo);
+					}
+				}
+				break;
+			}
+		}
 #ifdef _M_X64
 			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序仅支持64位的VST插件，不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
 #elif defined(_M_ARM)
@@ -940,6 +990,11 @@ void VMPlayer::OnLoop()
 		ReChooseMIDIInDevice();
 	if (KeyManager::CheckOnHitKey(KEY_INPUT_W))
 	{
+		if (!windowed)
+		{
+			ChangeWindowMode(windowed = TRUE);
+			CMDLG_SetUseDxDialogs(!windowed);
+		}
 		if (pmp->GetDeviceID() == MIDI_DEVICE_USE_VST_PLUGIN)
 			((VstPlugin*)pmp->GetPlugin())->ShowPluginWindow(!((VstPlugin*)pmp->GetPlugin())->IsPluginWindowShown());
 	}
