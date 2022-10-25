@@ -1,3 +1,4 @@
+#include "common.h"
 #include "CommonDialogs.h"
 #include "DxShell.h"
 #include "ChooseList.h"
@@ -148,6 +149,7 @@ void CMDLG_InfoBox(HWND hwnd, LPCTSTR msg, LPCTSTR title, bool appendTitle)
 	}
 	else
 	{
+#if _WIN32_WINNT>=_WIN32_WINNT_VISTA
 		TASKDIALOGCONFIG tdc{};
 		tdc.cbSize = sizeof(tdc);
 		tdc.hwndParent = hwnd;
@@ -171,5 +173,10 @@ void CMDLG_InfoBox(HWND hwnd, LPCTSTR msg, LPCTSTR title, bool appendTitle)
 			return S_OK;
 		};
 		TaskDialogIndirect(&tdc, NULL, NULL, NULL);
+#elif _WIN32_WINNT>=_WIN32_WINNT_WINXP
+		ShellMessageBox(GetModuleHandle(NULL), hwnd, msg, title, MB_ICONINFORMATION);
+#else
+		MessageBox(hwnd, msg, title, MB_ICONINFORMATION);
+#endif
 	}
 }
