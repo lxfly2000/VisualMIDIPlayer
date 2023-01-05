@@ -671,6 +671,13 @@ void VMPlayer::ReChooseMIDIDevice()
 		{
 			if (filepath[0])
 				OnLoadMIDI(filepath);
+			if (pmc)
+			{
+				UINT iid;
+				midiInGetID(pmc->GetHandle(), &iid);
+				EndMIDIInput();
+				InitMIDIInput(iid);
+			}
 			break;
 		}
 	}
