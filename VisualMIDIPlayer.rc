@@ -51,7 +51,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,9,6,0
+ FILEVERSION 2,10,0,0
  PRODUCTVERSION 2,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -69,7 +69,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "lxfly2000"
             VALUE "FileDescription", "Visual MIDI Player"
-            VALUE "FileVersion", "2.9.6.0"
+            VALUE "FileVersion", "2.10.0.0"
             VALUE "InternalName", "VisualMIDIPlayer.exe"
             VALUE "LegalCopyright", "Copyright (C) 2016～2023 lxfly2000 (https://github.com/lxfly2000/VisualMIDIPlayer)"
             VALUE "OriginalFilename", "VisualMIDIPlayer.exe"
@@ -81,6 +81,68 @@ BEGIN
     BEGIN
         VALUE "Translation", 0x804, 1200
     END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_CONTROL DIALOGEX 65386, 0, 157, 156
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_TOOLWINDOW
+CAPTION "操作界面"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "发送消息(&M, 十六进制加空格形式)",IDC_STATIC,7,7,143,47
+    COMBOBOX        IDC_COMBO_SENDMSG,13,20,131,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "发送后保留文本(&K)",IDC_CHECK_KEEP_EDIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,37,76,10
+    DEFPUSHBUTTON   "发送(&S)",IDOK,94,35,50,14
+    GROUPBOX        "编辑音色",IDC_STATIC,7,56,143,93
+    LTEXT           "通道(&C)",IDC_STATIC,13,70,25,8
+    EDITTEXT        IDC_EDIT_CHANNEL,40,67,33,14,ES_RIGHT | ES_AUTOHSCROLL
+    CONTROL         "",IDC_SPIN_CHANNEL,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,78,67,11,14
+    LTEXT           "音色(&P)",IDC_STATIC,13,84,25,8
+    COMBOBOX        IDC_COMBO_PROGRAM,40,84,104,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "&MSB(CC0)",IDC_STATIC,13,98,33,8
+    EDITTEXT        IDC_EDIT_MSB,13,112,33,14,ES_RIGHT | ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_SPIN_MSB,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,47,112,11,14
+    LTEXT           "&LSB(CC32)",IDC_STATIC,58,98,35,8
+    EDITTEXT        IDC_EDIT_LSB,58,112,33,14,ES_RIGHT | ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_SPIN_LSB,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,99,112,11,14
+    CONTROL         "自动设定(&A)",IDC_CHECK_AUTOPC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,132,54,10
+    PUSHBUTTON      "设定(&S)",IDC_BUTTON_PC,94,130,50,14
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_CONTROL, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 150
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 149
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_CONTROL AFX_DIALOG_LAYOUT
+BEGIN
+    0
 END
 
 #endif    // 中文(简体，中国) resources

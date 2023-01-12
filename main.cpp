@@ -7,6 +7,7 @@
 #include"CommonDialogs.h"
 #include"DxShell.h"
 #include"ResLoader.h"
+#include"resource.h"
 #include"resource1.h"
 #include"vstplugin.h"
 #include"MidiController/MidiController.h"
@@ -32,6 +33,8 @@
 #define FILTER_VST "VST插件\0*.dll\0所有文件\0*\0\0"
 #define FILTER_SOUNDFONT "SF2音色库\0*.sf2\0所有文件\0*\0\0"
 #define FILTER_MIDI "MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0"
+#define STR_MENU_SHOWCONTROL "显示操作界面(&O)"
+#define ID_MENU_SHOWCONTROL 2001
 
 enum CONTROL_CHANGE_NUMBER
 {
@@ -85,6 +88,7 @@ protected:
 	static VMPlayer* _pObj;
 private:
 	static LRESULT CALLBACK ExtraProcess(HWND, UINT, WPARAM, LPARAM);
+	static INT_PTR CALLBACK ControlProcess(HWND, UINT, WPARAM, LPARAM);
 	static WNDPROC dxProcess;
 	HWND hWindowDx;
 	//当返回CHOOSE_DEVICE_USER_CLICKED_CANCEL时为取消操作，其他为选择的设备ID
@@ -146,6 +150,7 @@ const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C
 
 VMPlayer* VMPlayer::_pObj = nullptr;
 WNDPROC VMPlayer::dxProcess = nullptr;
+HWND hDlgControl = NULL;
 
 unsigned VMPlayer::ChooseDevice(LPTSTR extraInfoPath,bool useDefaultIfOnlyOne)
 {
@@ -223,11 +228,141 @@ LRESULT CALLBACK VMPlayer::ExtraProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
 {
 	switch (msg)
 	{
+	case WM_SYSCOMMAND:
+		switch (wp)
+		{
+		case ID_MENU_SHOWCONTROL:
+			ShowWindow(hDlgControl, IsWindowVisible(hDlgControl) ? SW_HIDE : SW_SHOW);
+			break;
+		}
+		break;
 	case WM_DROPFILES://https://github.com/lxfly2000/XAPlayer/blob/master/Main.cpp#L301
 		VMPlayer::_pObj->OnDrop((HDROP)wp);
 		break;
 	}
 	return CallWindowProc(dxProcess, hwnd, msg, wp, lp);
+}
+
+#include<windowsx.h>
+
+INT_PTR CALLBACK VMPlayer::ControlProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
+{
+	switch (msg)
+	{
+	case WM_INITDIALOG:
+	{
+		CheckDlgButton(hwnd, IDC_CHECK_KEEP_EDIT, BST_CHECKED);
+		CheckDlgButton(hwnd, IDC_CHECK_AUTOPC, BST_CHECKED);
+		SendDlgItemMessage(hwnd, IDC_SPIN_CHANNEL, UDM_SETRANGE32, 1, 16);
+		SendDlgItemMessage(hwnd, IDC_SPIN_MSB, UDM_SETRANGE32, 0, 127);
+		SendDlgItemMessage(hwnd, IDC_SPIN_LSB, UDM_SETRANGE32, 0, 127);
+		SetDlgItemInt(hwnd, IDC_EDIT_CHANNEL, 1, FALSE);
+		ComboBox_SetCurSel(GetDlgItem(hwnd, IDC_COMBO_PROGRAM), 0);
+		HWND hMsg = GetDlgItem(hwnd, IDC_COMBO_SENDMSG);
+		ComboBox_AddString(hMsg, TEXT("F0 7E 7F 09 01 F7"));
+		ComboBox_AddString(hMsg, TEXT("F0 7E 7F 09 02 F7"));
+		ComboBox_AddString(hMsg, TEXT("F0 7E 7F 09 03 F7"));
+		ComboBox_AddString(hMsg, TEXT("F0 43 10 4C 00 00 7E 00 F7"));
+	}
+		break;
+	case WM_SHOWWINDOW:
+		CheckMenuItem(GetSystemMenu(_pObj->hWindowDx, FALSE), ID_MENU_SHOWCONTROL, wp ? MF_CHECKED : MF_UNCHECKED);
+		break;
+	case WM_COMMAND:
+		switch (LOWORD(wp))
+		{
+		case IDCANCEL:
+			ShowWindow(hwnd, SW_HIDE);
+			break;
+		case IDC_EDIT_CHANNEL:
+			if (HIWORD(wp) == EN_CHANGE)
+			{
+				HWND h = GetDlgItem(hwnd, IDC_COMBO_PROGRAM);
+				if (h)
+				{
+					int isel = ComboBox_GetCurSel(h);
+					static int ilastch = 10;
+					int ich = GetDlgItemInt(hwnd, IDC_EDIT_CHANNEL, NULL, FALSE);
+					if (ich == 10 || ilastch == 10)
+					{
+						ComboBox_ResetContent(h);
+						TCHAR t[32];
+						for (int i = 0; i < 128; i++)
+						{
+							if (ich == 10)
+								wsprintf(t, TEXT("[%d]%s"), i, drumName[i]);
+							else
+								wsprintf(t, TEXT("[%d]%s"), i, programName[i]);
+							ComboBox_AddString(h, t);
+						}
+						ComboBox_SetCurSel(h, isel);
+					}
+					ilastch = ich;
+				}
+			}
+			break;
+		case IDC_COMBO_PROGRAM:
+			if (HIWORD(wp) == CBN_SELCHANGE && IsDlgButtonChecked(hwnd, IDC_CHECK_AUTOPC) == BST_CHECKED)
+				SendMessage(hwnd, WM_COMMAND, IDC_BUTTON_PC, 0);
+			break;
+		case IDC_EDIT_MSB:
+		case IDC_EDIT_LSB:
+			if (HIWORD(wp) == EN_CHANGE && IsDlgButtonChecked(hwnd, IDC_CHECK_AUTOPC) == BST_CHECKED)
+				SendMessage(hwnd, WM_COMMAND, IDC_BUTTON_PC, 0);
+			break;
+		case IDOK:
+			if (_pObj&&_pObj->pmp)
+			{
+				TCHAR buf[256];
+				ComboBox_GetText(GetDlgItem(hwnd, IDC_COMBO_SENDMSG), buf, ARRAYSIZE(buf));
+				std::vector<BYTE> mdata;
+				for (int i = 0; i < ARRAYSIZE(buf); i++)
+				{
+					if (buf[i] >= '0'&&buf[i] <= '9')
+						mdata.push_back(buf[i] - '0');
+					else if (buf[i] >= 'A'&&buf[i] <= 'F')
+						mdata.push_back(buf[i] - 'A' + 10);
+					else if (buf[i] >= 'a'&&buf[i] <= 'f')
+						mdata.push_back(buf[i] - 'a' + 10);
+				}
+				if (mdata.size() % 2 == 1)
+					mdata.push_back(0);
+				for (int i = 0; i < mdata.size();i++)
+				{
+					mdata[i] = (mdata[i] << 4) | mdata[i + 1];
+					mdata.erase(mdata.begin() + i + 1);
+				}
+				while (mdata.size() < 4)
+					mdata.push_back(0);
+				if (mdata.size() == 4)
+					_pObj->pmp->_ProcessMidiShortEvent(*(PDWORD)mdata.data(), true);
+				else
+				{
+					MIDIHDR hdr = { 0 };
+					hdr.lpData = (LPSTR)mdata.data();
+					hdr.dwBufferLength = mdata.size();
+					_pObj->pmp->_ProcessMidiLongEvent(&hdr, true);
+				}
+			}
+			if (IsDlgButtonChecked(hwnd, IDC_CHECK_KEEP_EDIT) == BST_UNCHECKED)
+				ComboBox_SetText(GetDlgItem(hwnd, IDC_COMBO_SENDMSG), TEXT(""));
+			break;
+		case IDC_BUTTON_PC:
+			if (_pObj&&_pObj->pmp)
+			{
+				int ch = (GetDlgItemInt(hwnd, IDC_EDIT_CHANNEL, NULL, FALSE) - 1) & 0xF;
+				int pg = ComboBox_GetCurSel(GetDlgItem(hwnd, IDC_COMBO_PROGRAM)) & 0x7F;
+				int msb = GetDlgItemInt(hwnd, IDC_EDIT_MSB, NULL, FALSE);
+				int lsb = GetDlgItemInt(hwnd, IDC_EDIT_LSB, NULL, FALSE);
+				_pObj->pmp->_ProcessMidiShortEvent((0xB0 | ch) | (msb << 16), true);
+				_pObj->pmp->_ProcessMidiShortEvent((0xB0 | ch) | 0x2000 | (lsb << 16), true);
+				_pObj->pmp->_ProcessMidiShortEvent((0xC0 | ch) | (pg << 8), true);
+			}
+			break;
+		}
+		break;
+	}
+	return 0;
 }
 
 int VMPlayer::Init(TCHAR* param)
@@ -309,9 +444,12 @@ int VMPlayer::Init(TCHAR* param)
 
 	//http://nut-softwaredevelopper.hatenablog.com/entry/2016/02/25/001647
 	hWindowDx = GetMainWindowHandle();
+	AppendMenu(GetSystemMenu(hWindowDx, FALSE), MF_STRING, ID_MENU_SHOWCONTROL, TEXT(STR_MENU_SHOWCONTROL));
 	dxProcess = (WNDPROC)GetWindowLongPtr(hWindowDx, GWLP_WNDPROC);
 	SetWindowLongPtr(hWindowDx, GWL_EXSTYLE, WS_EX_ACCEPTFILES | GetWindowLongPtr(hWindowDx, GWL_EXSTYLE));
 	SetWindowLongPtr(hWindowDx, GWLP_WNDPROC, (LONG_PTR)ExtraProcess);
+
+	hDlgControl = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_CONTROL), hWindowDx, ControlProcess);
 
 	while (true)
 	{
