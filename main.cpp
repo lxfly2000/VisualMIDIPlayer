@@ -262,6 +262,9 @@ INT_PTR CALLBACK VMPlayer::ControlProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM
 		ComboBox_AddString(hMsg, TEXT("F0 7E 7F 09 01 F7"));
 		ComboBox_AddString(hMsg, TEXT("F0 7E 7F 09 02 F7"));
 		ComboBox_AddString(hMsg, TEXT("F0 7E 7F 09 03 F7"));
+		ComboBox_AddString(hMsg, TEXT("F0 41 00 42 12 40 00 7F 00 41 F7"));
+		ComboBox_AddString(hMsg, TEXT("F0 41 00 42 12 40 00 7F 7F 42 F7"));
+		ComboBox_AddString(hMsg, TEXT("F0 41 00 42 12 00 00 7F 00 00 F7"));
 		ComboBox_AddString(hMsg, TEXT("F0 43 10 4C 00 00 7E 00 F7"));
 	}
 		break;
