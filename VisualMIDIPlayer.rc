@@ -51,7 +51,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,10,0,0
+ FILEVERSION 2,10,1,0
  PRODUCTVERSION 2,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -69,7 +69,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "lxfly2000"
             VALUE "FileDescription", "Visual MIDI Player"
-            VALUE "FileVersion", "2.10.0.0"
+            VALUE "FileVersion", "2.10.1.0"
             VALUE "InternalName", "VisualMIDIPlayer.exe"
             VALUE "LegalCopyright", "Copyright (C) 2016～2023 lxfly2000 (https://github.com/lxfly2000/VisualMIDIPlayer)"
             VALUE "OriginalFilename", "VisualMIDIPlayer.exe"
@@ -89,14 +89,14 @@ END
 // Dialog
 //
 
-IDD_CONTROL DIALOGEX 65386, 0, 157, 156
+IDD_CONTROL DIALOGEX 500, 0, 157, 156
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_TOOLWINDOW
 CAPTION "操作界面"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     GROUPBOX        "发送消息(&M, 十六进制加空格形式)",IDC_STATIC,7,7,143,47
-    COMBOBOX        IDC_COMBO_SENDMSG,13,20,131,30,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_COMBO_SENDMSG,13,20,131,30,CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
     CONTROL         "发送后保留文本(&K)",IDC_CHECK_KEEP_EDIT,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,37,76,10
     DEFPUSHBUTTON   "发送(&S)",IDOK,94,35,50,14
     GROUPBOX        "编辑音色",IDC_STATIC,7,56,143,93

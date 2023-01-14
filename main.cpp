@@ -622,8 +622,10 @@ void VMPlayer::Run()
 {
 	while (running)
 	{
-		if (ProcessMessage())break;
-		OnLoop();
+		if (ProcessMessage())
+			break;
+		if (GetActiveWindow() != hDlgControl)
+			OnLoop();
 		OnDraw();
 	}
 }
