@@ -14,18 +14,6 @@
 
 #pragma comment(lib,"ComCtl32.lib")
 
-#ifdef _M_X64
-#pragma comment(lib,"libMidiPlayer/XAudio2_8/Lib/winv6.3/um/x64/XAudio2.lib")
-#elif defined(_M_ARM)
-#pragma comment(lib,"libMidiPlayer/XAudio2_8/Lib/winv6.3/um/arm/XAudio2.lib")
-#elif defined(_M_ARM64)
-#error "The ARM64 architecture is not supported yet."
-#elif defined(_M_IX86)
-#pragma comment(lib,"libMidiPlayer/XAudio2_8/Lib/winv6.3/um/x86/XAudio2.lib")
-#else
-#error "XAudio2 doesn't support this platform."
-#endif
-
 
 #define APP_TITLE "Visual MIDI Player"
 #define VMP_TEMP_FILENAME "vmp_temp.mid"
@@ -486,6 +474,7 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId, LPVOID extraInfo)
 		switch (pmp->GetDeviceID())
 		{
 		case MIDI_DEVICE_USE_VST_PLUGIN:
+#if _WIN32_WINNT < _WIN32_WINNT_WIN8
 		{
 			IXAudio2*x = nullptr;
 			HRESULT hrx = XAudio2Create(&x);
@@ -536,6 +525,7 @@ int VMPlayer::InitMIDIPlayer(UINT deviceId, LPVOID extraInfo)
 				break;
 			}
 		}
+#endif
 #ifdef _M_X64
 			CMDLG_MessageBox(hWindowDx, TEXT("加载失败，请检查是否是有效的VST插件。\n\n* 本程序仅支持64位的VST插件，不支持VST3插件。"), NULL, MB_ICONEXCLAMATION);
 #elif defined(_M_ARM)
