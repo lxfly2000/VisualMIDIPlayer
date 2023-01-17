@@ -131,6 +131,8 @@ const TCHAR helpInfo[] = TEXT("【界面未标示的其他功能】\n\nZ: 加速 X: 恢复原速 C
 	TEXT("Shift+1,2...6: 静音/取消静音第11,12...16通道\nShift+Space：播放/暂停（无丢失）\n←/→: 定位\n\n")
 	TEXT("通道信息的各数值分别表示：\n音色，CC0，CC32，调制(Modulation)，音量(Volume)，平衡(Pan)，表情(Expression)\n\n")
 	TEXT("屏幕钢琴框架颜色表示的MIDI模式：\n蓝色:GM 橘黄色:GS 绿色:XG 银灰色:GM2\n\n")
+	TEXT("若使用VST播放，你需要安装DirectX运行时来获得更好的性能：\n")
+	TEXT("https://www.microsoft.com/download/details.aspx?id=8109\n\n")
 	TEXT("制作：lxfly2000\nhttps://github.com/lxfly2000/VisualMIDIPlayer");
 #include"Instruments.h"
 #include<vector>

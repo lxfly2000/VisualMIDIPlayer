@@ -159,7 +159,7 @@ void CMDLG_InfoBox(HWND hwnd, LPCTSTR msg, LPCTSTR title, bool appendTitle)
 		tdc.pszWindowTitle = title;
 		tdc.pszMainIcon = TD_INFORMATION_ICON;
 		std::basic_string<TCHAR>msgWithURL = msg;
-		msgWithURL = std::regex_replace(msgWithURL, std::basic_regex<TCHAR>(TEXT("(https?://[A-Za-z0-9_\\-\\./]+)")), TEXT("<a href=\"$1\">$1</a>"));
+		msgWithURL = std::regex_replace(msgWithURL, std::basic_regex<TCHAR>(TEXT("(https?://[A-Za-z0-9_\\-\\./\\?&=]+)")), TEXT("<a href=\"$1\">$1</a>"));
 		tdc.pszContent = msgWithURL.c_str();
 #undef LONG_PTR
 		tdc.pfCallback = [](HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, LONG_PTR lpRefData)
