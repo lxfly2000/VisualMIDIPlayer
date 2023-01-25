@@ -1,6 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
-
 #include<DxLib.h>
 #include<MidiPlayer.h>
 #include"MIDIScreen.h"
@@ -23,6 +20,7 @@
 #define FILTER_MIDI "MIDI 序列\0*.mid;*.rmi\0所有文件\0*\0\0"
 #define STR_MENU_SHOWCONTROL "显示操作界面(&O)"
 #define ID_MENU_SHOWCONTROL 2001
+#define FILTER_DOMINO "Domino XML 文件\0*.xml\0所有文件\0*\0\0"
 
 enum CONTROL_CHANGE_NUMBER
 {
@@ -234,6 +232,215 @@ LRESULT CALLBACK VMPlayer::ExtraProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
 }
 
 #include<windowsx.h>
+#include<atlmem.h>
+
+struct DominoBankNode
+{
+	std::wstring name;
+	WORD subBankNumber;
+};
+
+struct DominoPCNode
+{
+	std::wstring name;
+	BYTE bankNumber;
+	std::vector<DominoBankNode>banks;
+};
+
+struct DominoMapNode
+{
+	std::wstring name;
+	std::vector<DominoPCNode>pcs;
+};
+
+struct DominoBank
+{
+	TCHAR dominoPath[MAX_PATH] = TEXT("");
+	std::vector<DominoMapNode>instruments[2];//0:Inst 1:Drum
+	BOOL LoadBank(HWND hwnd, LPCTSTR path, int channel)
+	{
+		TCHAR buttonText[263];
+		if(!ReadNodes(path))
+		{
+			wsprintf(buttonText, TEXT("%s【加载失败】(&D)"), wcsrchr(path, '\\') + 1);
+			SetDlgItemText(hwnd, IDC_DOMINO_BROWSE, buttonText);
+			return FALSE;
+		}
+		LoadList(hwnd, channel);
+		lstrcpy(dominoPath, path);
+		wsprintf(buttonText, TEXT("%s(&D)"), wcsrchr(dominoPath, '\\') + 1);
+		SetDlgItemText(hwnd, IDC_DOMINO_BROWSE, buttonText);
+		return TRUE;
+	}
+	void LoadList(HWND hwnd, int channel)
+	{
+		HWND hTree = GetDlgItem(hwnd, IDC_TREE_DOMINO);
+		TreeView_DeleteAllItems(hTree);
+		std::vector<DominoMapNode>&dmap = instruments[channel == 10 ? 1 : 0];
+		TVINSERTSTRUCT tis;
+		tis.item.mask = TVIF_TEXT | TVIF_PARAM;
+		tis.item.pszText = (channel == 10 ? TEXT("DrumSetList") : TEXT("InstrumentList"));
+		tis.item.cchTextMax = lstrlen(tis.item.pszText);
+		tis.item.lParam = MAKELPARAM((channel == 10 ? 1 : 0), 0);//List#
+		tis.hInsertAfter = TVI_LAST;
+		tis.hParent = TVI_ROOT;
+		HTREEITEM hRoot = TreeView_InsertItem(hTree, &tis);
+		for (int k = 0; k < dmap.size(); k++)
+		{
+			tis.item.pszText = (LPWSTR)dmap[k].name.c_str();
+			tis.item.cchTextMax = dmap[k].name.length();
+			tis.item.lParam = MAKELPARAM(k, 1);//Map#
+			tis.hParent = hRoot;
+			HTREEITEM hMap = TreeView_InsertItem(hTree, &tis);
+			for (int j = 0; j < dmap[k].pcs.size(); j++)
+			{
+				TCHAR buf[64];
+				wsprintf(buf, TEXT("[%d]%s"), dmap[k].pcs[j].bankNumber, dmap[k].pcs[j].name.c_str());
+				tis.item.pszText = buf;
+				tis.item.cchTextMax = ARRAYSIZE(buf);
+				tis.item.lParam = MAKELPARAM(j, 2);//PC#
+				tis.hParent = hMap;
+				HTREEITEM hPC = TreeView_InsertItem(hTree, &tis);
+				for (int i = 0; i < dmap[k].pcs[j].banks.size(); i++)
+				{
+					wsprintf(buf, TEXT("[%d,%d,%d]%s"), dmap[k].pcs[j].bankNumber, HIBYTE(dmap[k].pcs[j].banks[i].subBankNumber),
+						LOBYTE(dmap[k].pcs[j].banks[i].subBankNumber), dmap[k].pcs[j].banks[i].name.c_str());
+					tis.item.lParam = MAKELPARAM(i, 3);//SUB#
+					tis.hParent = hPC;
+					TreeView_InsertItem(hTree, &tis);
+				}
+			}
+		}
+	}
+	BOOL ReadNodes(LPCTSTR path)
+	{
+/*Domino音色定义文件
+ModuleData Name="模块名"
++ InstrumentList
+| + Map Name="音色表名"
+| | + PC Name="音色名" PC="音色号"
+| | | + Bank Name="音色名" MSB="子音色号高字节" LSB="子音色号低字节"
+| | | + Bank ...
+| | + PC ...
+| + Map ...
++ DrumSetList
+| + Map Name="音色表名"
+| | + PC Name="音色名" PC="音色号"
+| | | + Bank Name="音色名" MSB="子音色号高字节" LSB="子音色号低字节"
+| | | | + Tone Name="音名" Key="键号"
+| | | | + Tone ...
+| | | + Bank ...
+| | + PC ...
+| + Map ...
++ （其他选项）
+*/
+#define HC(x)if(FAILED(x))return FALSE
+		VARIANT_BOOL vSuccess;
+		CComVariant v;
+		CComPtr<IXMLDOMDocument>pXmlDoc;//它的自动释放功能会与CoUninitalize起冲突，因此把它放到单独的函数中
+		CComPtr<IXMLDOMElement>pXmlRootElem;
+		//https://blog.csdn.net/zsscy/article/details/6444215
+		HC(pXmlDoc.CoCreateInstance(CLSID_DOMDocument));
+		//Variant可以用CComVariant简化
+		//https://www.cnblogs.com/lingyun1120/archive/2011/11/02/2232709.html
+		HC(pXmlDoc->load(CComVariant(path), &vSuccess));//可以用load加载XML文件，save保存文件，且保存后自动转为UTF-8编码（这点好评）
+		if (vSuccess == FALSE)
+			return FALSE;
+		HC(pXmlDoc->get_documentElement(&pXmlRootElem));
+		//读取XML
+		LPCTSTR tagNames[] = { TEXT("InstrumentList"),TEXT("DrumSetList") };
+		for (int m = 0; m < 2; m++)
+		{
+			CComPtr<IXMLDOMNodeList>pXmlModuleNodes;
+			instruments[m].clear();
+			HC(pXmlRootElem->getElementsByTagName(CComBSTR(tagNames[m]), &pXmlModuleNodes));
+			CComPtr<IXMLDOMNode>pXmlModuleNode;
+			LONG lengthList,lengthMap;
+			HC(pXmlModuleNodes->get_length(&lengthList));
+			if (lengthList < 1)
+				continue;
+			HC(pXmlModuleNodes->get_item(0, &pXmlModuleNode));
+			CComPtr<IXMLDOMElement>pXmlModuleElem;
+			HC(pXmlModuleNode->QueryInterface(&pXmlModuleElem));
+			CComPtr<IXMLDOMNodeList>pXmlMapNodes;
+			HC(pXmlModuleElem->getElementsByTagName(CComBSTR("Map"), &pXmlMapNodes));
+			HC(pXmlMapNodes->get_length(&lengthMap));
+			for (int k = 0; k < lengthMap; k++)
+			{
+				//Map
+				instruments[m].push_back(DominoMapNode());
+				DominoMapNode &dmap = instruments[m].back();
+				CComPtr<IXMLDOMNode>pXmlMapNode;
+				HC(pXmlMapNodes->get_item(k, &pXmlMapNode));
+				CComPtr<IXMLDOMElement>pXmlMapElem;
+				HC(pXmlMapNode->QueryInterface(&pXmlMapElem));
+				HC(pXmlMapElem->getAttribute(CComBSTR("Name"), &v));
+				dmap.name = v.bstrVal;
+				CComPtr<IXMLDOMNodeList>pXmlPCNodes;
+				HC(pXmlMapElem->getElementsByTagName(CComBSTR("PC"),&pXmlPCNodes));
+				LONG lengthPC;
+				HC(pXmlPCNodes->get_length(&lengthPC));
+				for (int j = 0; j < lengthPC; j++)
+				{
+					//PC
+					dmap.pcs.push_back(DominoPCNode());
+					DominoPCNode&dpc = dmap.pcs.back();
+					CComPtr<IXMLDOMNode>pXmlPCNode;
+					HC(pXmlPCNodes->get_item(j, &pXmlPCNode));
+					CComPtr<IXMLDOMElement>pXmlPCElem;
+					HC(pXmlPCNode->QueryInterface(&pXmlPCElem));
+					HC(pXmlPCElem->getAttribute(CComBSTR("Name"), &v));
+					dpc.name = v.bstrVal;
+					HC(pXmlPCElem->getAttribute(CComBSTR("PC"), &v));
+					dpc.bankNumber = _ttoi(v.bstrVal);
+					CComPtr<IXMLDOMNodeList>pXmlBankNodes;
+					HC(pXmlPCElem->getElementsByTagName(CComBSTR("Bank"), &pXmlBankNodes));
+					LONG lengthBank;
+					HC(pXmlBankNodes->get_length(&lengthBank));
+					for (int i = 0; i < lengthBank; i++)
+					{
+						//Bank
+						dpc.banks.push_back(DominoBankNode());
+						DominoBankNode&dbank = dpc.banks.back();
+						CComPtr<IXMLDOMNode>pXmlBankNode;
+						HC(pXmlBankNodes->get_item(i, &pXmlBankNode));
+						CComPtr<IXMLDOMElement>pXmlBankElem;
+						HC(pXmlBankNode->QueryInterface(&pXmlBankElem));
+						HC(pXmlBankElem->getAttribute(CComBSTR("Name"), &v));
+						dbank.name = v.bstrVal;
+						HC(pXmlBankElem->getAttribute(CComBSTR("MSB"), &v));
+						dbank.subBankNumber = (v.vt == VT_NULL ? 0 : _ttoi(v.bstrVal));
+						HC(pXmlBankElem->getAttribute(CComBSTR("LSB"), &v));
+						dbank.subBankNumber = (v.vt == VT_NULL ? 0 : MAKEWORD(_ttoi(v.bstrVal), dbank.subBankNumber));
+					}
+				}
+			}
+		}
+		return TRUE;
+#undef HC
+	}
+	void ChooseItem(HWND hwnd, LPTVITEM pItem)
+	{
+		HWND hTree = GetDlgItem(hwnd, IDC_TREE_DOMINO);
+		int level = HIWORD(pItem->lParam);
+		if (level < 2)
+			return;
+		int index[4] = { 0 };
+		TVITEM tvi{};
+		tvi.hItem = pItem->hItem;
+		tvi.mask = TVIF_PARAM;
+		do
+		{
+			TreeView_GetItem(hTree, &tvi);
+			index[HIWORD(tvi.lParam)] = LOWORD(tvi.lParam);
+			tvi.hItem = TreeView_GetParent(hTree, tvi.hItem);
+		}while (tvi.hItem);
+		ComboBox_SetCurSel(GetDlgItem(hwnd, IDC_COMBO_PROGRAM), instruments[index[0]][index[1]].pcs[index[2]].bankNumber - 1);
+		SetDlgItemInt(hwnd, IDC_EDIT_MSB, HIBYTE(instruments[index[0]][index[1]].pcs[index[2]].banks[index[3]].subBankNumber), FALSE);
+		SetDlgItemInt(hwnd, IDC_EDIT_LSB, LOBYTE(instruments[index[0]][index[1]].pcs[index[2]].banks[index[3]].subBankNumber), FALSE);
+		SendMessage(hwnd, WM_COMMAND, IDC_BUTTON_PC, 0);
+	}
+}dominoBank;
 
 INT_PTR CALLBACK VMPlayer::ControlProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -289,6 +496,7 @@ INT_PTR CALLBACK VMPlayer::ControlProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM
 							ComboBox_AddString(h, t);
 						}
 						ComboBox_SetCurSel(h, isel);
+						dominoBank.LoadList(hwnd, ich);
 					}
 					ilastch = ich;
 				}
@@ -352,7 +560,15 @@ INT_PTR CALLBACK VMPlayer::ControlProcess(HWND hwnd, UINT msg, WPARAM wp, LPARAM
 				_pObj->pmp->_ProcessMidiShortEvent((0xC0 | ch) | (pg << 8), true);
 			}
 			break;
+		case IDC_DOMINO_BROWSE:
+			if (CMDLG_ChooseFile(hwnd, dominoBank.dominoPath, dominoBank.dominoPath, TEXT(FILTER_DOMINO)))
+				dominoBank.LoadBank(hwnd, dominoBank.dominoPath, GetDlgItemInt(hwnd, IDC_EDIT_CHANNEL, NULL, FALSE));
+			break;
 		}
+		break;
+	case WM_NOTIFY://较老的控件使用WM_COMMAND发送通知，新控件使用WM_NOTIFY发送通知
+		if (((LPNMHDR)lp)->code == TVN_SELCHANGED && ((LPNMHDR)lp)->idFrom == IDC_TREE_DOMINO)
+			dominoBank.ChooseItem(hwnd, &((LPNMTREEVIEW)lp)->itemNew);
 		break;
 	}
 	return 0;
