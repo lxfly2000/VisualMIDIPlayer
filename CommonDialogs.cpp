@@ -172,7 +172,12 @@ void CMDLG_InfoBox(HWND hwnd, LPCTSTR msg, LPCTSTR title, bool appendTitle)
 			}
 			return S_OK;
 		};
-		TaskDialogIndirect(&tdc, NULL, NULL, NULL);
+		typedef HRESULT(WINAPI*TTaskDialogIndirect)(_In_ const TASKDIALOGCONFIG *pTaskConfig, _Out_opt_ int *pnButton, _Out_opt_ int *pnRadioButton, _Out_opt_ BOOL *pfVerificationFlagChecked);
+		TTaskDialogIndirect f = (TTaskDialogIndirect)GetProcAddress(LoadLibrary(TEXT("comctl32.dll")), "TaskDialogIndirect");
+		if (f)
+			f(&tdc, NULL, NULL, NULL);
+		else
+			MessageBox(hwnd, msg, tdc.pszWindowTitle, MB_ICONINFORMATION);
 #elif _WIN32_WINNT>=_WIN32_WINNT_WINXP
 		ShellMessageBox(GetModuleHandle(NULL), hwnd, msg, title, MB_ICONINFORMATION);
 #else
